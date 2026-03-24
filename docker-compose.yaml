@@ -1,0 +1,15 @@
+services:
+  backend:
+    build: ./backend
+    restart: always
+    volumes:
+      - ./backend/db.sqlite3:/app/db.sqlite3
+      - ./backend/media:/app/media
+
+  frontend:
+    build: ./frontend
+    restart: always
+    ports:
+      - "8273:80"
+    depends_on:
+      - backend
