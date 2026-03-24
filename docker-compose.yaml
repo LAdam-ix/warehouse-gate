@@ -2,9 +2,12 @@ services:
   backend:
     build: ./backend
     restart: always
+    environment:
+      - DB_DIR=/app/db
+      - MEDIA_ROOT=/app/media
     volumes:
-      - ./backend/db.sqlite3:/app/db.sqlite3
-      - ./backend/media:/app/media
+      - ./data/db:/app/db
+      - ./data/media:/app/media
 
   frontend:
     build: ./frontend

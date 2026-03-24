@@ -16,3 +16,6 @@ frontend/dist/
 
 # Env
 .env
+
+# Runtime data (db + uploads) — created by Docker on the server
+data/

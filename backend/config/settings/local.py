@@ -7,14 +7,15 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+_DB_DIR = os.environ.get("DB_DIR", str(BASE_DIR))  # noqa: F405
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",  # noqa: F405
+        "NAME": os.path.join(_DB_DIR, "db.sqlite3"),
     }
 }
 
-MEDIA_ROOT = BASE_DIR / "media"  # noqa: F405
+MEDIA_ROOT = os.environ.get("MEDIA_ROOT", str(BASE_DIR / "media"))  # noqa: F405
 
 STATIC_ROOT = BASE_DIR / "staticfiles"  # noqa: F405
 
