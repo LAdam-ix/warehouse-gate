@@ -29,6 +29,7 @@ import { useTranslation } from "react-i18next";
 const CatalogPrefsContext = createContext({ showSku: false });
 
 import { variantLabel } from "../../utils/variantLabel";
+import { intQtyInputProps } from "../../utils/form";
 
 // ─── Quick sell dialog ────────────────────────────────────────────────────────
 
@@ -79,7 +80,7 @@ function QuickSellDialog({
             fullWidth
             value={qty}
             onChange={(e) => setQty(Number(e.target.value))}
-            slotProps={{ htmlInput: { min: 1, max: variant.totalStock } }}
+            slotProps={{ htmlInput: { ...intQtyInputProps, min: 1, max: variant.totalStock } }}
             helperText={t("catalog.quickSellDialog.inStock", { count: variant.totalStock })}
           />
           <TextField

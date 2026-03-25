@@ -15,6 +15,7 @@ import { toast } from "react-toastify";
 import { axiosInstance } from "../api/client/axiosInstance";
 import { useProducts, useProduct, useLocations, useTransferStock } from "../api/hooks";
 import { variantLabel } from "../utils/variantLabel";
+import { intQtyInputProps } from "../utils/form";
 import type { PaginatedResponse, Product, ProductVariant, StockEntry } from "../types/api";
 import { useTranslation } from "react-i18next";
 
@@ -288,7 +289,7 @@ export function TransferStockDialog({
                 size="small"
                 value={qty}
                 onChange={(e) => setQty(e.target.value)}
-                slotProps={{ htmlInput: { min: 1, max: maxQty, step: 1 } }}
+                slotProps={{ htmlInput: { ...intQtyInputProps, min: 1, max: maxQty } }}
                 helperText={fromId ? t("transferStockDialog.maxQty", { max: maxQty }) : " "}
               />
 

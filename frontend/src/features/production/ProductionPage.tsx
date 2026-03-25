@@ -27,6 +27,7 @@ import {
 } from "../../api/hooks";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { variantLabel } from "../../utils/variantLabel";
+import { intQtyInputProps } from "../../utils/form";
 import type { Product, ProductionRequest } from "../../types/api";
 import { useTranslation } from "react-i18next";
 
@@ -313,6 +314,7 @@ function FulfillDialog({
             onChange={(e) => setQty(e.target.value)}
             helperText={t("production.fulfillDialog.qtyHelper")}
             fullWidth
+            slotProps={{ htmlInput: { ...intQtyInputProps, min: 1 } }}
           />
           <TextField
             label={t("common.noteOptional")}

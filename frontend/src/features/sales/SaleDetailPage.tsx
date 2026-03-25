@@ -19,6 +19,7 @@ import {
   useLocations, useStockEntries, useFirm,
 } from "../../api/hooks";
 import type { Location, SaleLine, SaleWrite, StockEntry } from "../../types/api";
+import { intQtyInputProps } from "../../utils/form";
 import ProductPickerPanel, { type ProductPickerSelectFn } from "../../components/ProductPickerPanel";
 import { useTranslation } from "react-i18next";
 
@@ -139,8 +140,7 @@ function CartLineRow({ line, saleId, locations }: { line: SaleLine; saleId: stri
             sx={{ width: 50, ...noSpinnerSx }}
             slotProps={{
               htmlInput: {
-                step: isHourly ? "0.25" : "1",
-                min: isHourly ? "0.25" : "1",
+                ...(isHourly ? { step: "0.25", min: "0.25" } : { ...intQtyInputProps, min: "1" }),
                 style: { textAlign: "center", padding: "4px 6px" },
               },
             }}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { variantLabel } from "../../utils/variantLabel";
+import { intQtyInputProps } from "../../utils/form";
 import {
   Autocomplete, Button, CircularProgress, Dialog, DialogActions, DialogContent,
   DialogTitle, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography,
@@ -121,6 +122,7 @@ export default function CreateRequestDialog({
               value={qty}
               onChange={(e) => setQty(e.target.value)}
               sx={{ flex: 1 }}
+              slotProps={{ htmlInput: { ...intQtyInputProps, min: 1 } }}
             />
             <TextField
               label={t("production.newRequestDialog.targetStock")}
@@ -130,6 +132,7 @@ export default function CreateRequestDialog({
               onChange={(e) => setTarget(e.target.value)}
               sx={{ flex: 1 }}
               helperText={t("production.newRequestDialog.targetHelper")}
+              slotProps={{ htmlInput: { ...intQtyInputProps, min: 0 } }}
             />
           </Stack>
 

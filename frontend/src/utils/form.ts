@@ -47,6 +47,21 @@ export function emptyToNulls<T extends Record<string, string>>(
 }
 
 /**
+ * slotProps.htmlInput for integer-only quantity fields.
+ * Blocks decimal point, comma, and scientific notation (e/E).
+ * Allows digits and +/- signs only.
+ *
+ * @example
+ * <TextField type="number" slotProps={{ htmlInput: intQtyInputProps }} />
+ */
+export const intQtyInputProps = {
+  step: 1,
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (['.', ',', 'e', 'E'].includes(e.key)) e.preventDefault();
+  },
+} as const;
+
+/**
  * Strip keys from an object before sending to the API.
  * Use when your form type extends the API type with extra form-only fields.
  *

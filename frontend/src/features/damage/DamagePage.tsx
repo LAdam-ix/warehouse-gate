@@ -7,6 +7,7 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import { toast } from "react-toastify";
 import { useDamageReports, useCreateDamageReport, useLocations } from "../../api/hooks";
+import { intQtyInputProps } from "../../utils/form";
 import { useTranslation } from "react-i18next";
 
 function ReportDamageDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -66,7 +67,7 @@ function ReportDamageDialog({ open, onClose }: { open: boolean; onClose: () => v
             size="small"
             value={form.quantity}
             onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-            inputProps={{ min: 1 }}
+            slotProps={{ htmlInput: { ...intQtyInputProps, min: 1 } }}
           />
           <TextField
             label={t("damage.reportDamageDialog.reasonRequired")}

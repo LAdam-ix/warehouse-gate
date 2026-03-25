@@ -6,6 +6,7 @@ import {
 import { toast } from "react-toastify";
 import { useAddStock, useLocations } from "../api/hooks";
 import { variantLabel } from "../utils/variantLabel";
+import { intQtyInputProps } from "../utils/form";
 import type { ProductVariant } from "../types/api";
 import { useTranslation } from "react-i18next";
 
@@ -105,7 +106,7 @@ export function AddStockDialog({
             fullWidth
             value={qty}
             onChange={(e) => setQty(Number(e.target.value))}
-            slotProps={{ htmlInput: { min: 1 } }}
+            slotProps={{ htmlInput: { ...intQtyInputProps, min: 1 } }}
           />
           <LocationSelect locations={locations ?? []} value={locationId} onChange={setLocationId} />
           <TextField
