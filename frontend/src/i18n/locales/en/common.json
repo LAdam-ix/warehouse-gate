@@ -333,6 +333,8 @@
     "voidSale": "Void sale (restores stock)",
     "subtotal": "Subtotal",
     "discounts": "Discounts",
+    "discountPercent": "Discount %",
+    "discountFixedLabel": "Discount €",
     "saleProfit": "Profit",
     "saleCost": "Cost",
     "linesTitle": "Lines",

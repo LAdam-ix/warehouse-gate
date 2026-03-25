@@ -249,6 +249,44 @@ function ReadOnlyLineRow({ line }: { line: SaleLine }) {
   );
 }
 
+// ─── Sale-level discount (local state, saves on blur) ────────────────────────
+
+function SaleDiscountFields({ sale, onSave }: { sale: { discountPercentage: string; discountFixed: string }; onSave: (data: { discountPercentage?: string; discountFixed?: string }) => void }) {
+  const { t } = useTranslation();
+  const [pct, setPct] = useState(sale.discountPercentage === "0.00" ? "" : sale.discountPercentage);
+  const [fixed, setFixed] = useState(sale.discountFixed === "0.00" ? "" : sale.discountFixed);
+
+  const savePct = () => { const v = pct.trim() || "0"; if (v !== sale.discountPercentage) onSave({ discountPercentage: v }); };
+  const saveFixed = () => { const v = fixed.trim() || "0"; if (v !== sale.discountFixed) onSave({ discountFixed: v }); };
+
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <TextField
+        size="small" type="number"
+        label={t("sales.discountPercent")}
+        value={pct}
+        onChange={(e) => setPct(e.target.value)}
+        onBlur={savePct}
+        onKeyDown={(e) => { if (e.key === "Enter") savePct(); }}
+        slotProps={{ htmlInput: { step: "0.01", min: 0, max: 100 } }}
+        InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
+        sx={{ width: 110 }}
+      />
+      <TextField
+        size="small" type="number"
+        label={t("sales.discountFixedLabel")}
+        value={fixed}
+        onChange={(e) => setFixed(e.target.value)}
+        onBlur={saveFixed}
+        onKeyDown={(e) => { if (e.key === "Enter") saveFixed(); }}
+        slotProps={{ htmlInput: { step: "0.01", min: 0 } }}
+        InputProps={{ startAdornment: <InputAdornment position="start">€</InputAdornment> }}
+        sx={{ width: 120 }}
+      />
+    </Stack>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function SaleDetailPage() {
@@ -459,6 +497,9 @@ export default function SaleDetailPage() {
                 onChange={(e) => setNoteValue(e.target.value)}
                 onBlur={handleNoteBlur}
               />
+
+              {/* Sale-level discount */}
+              <SaleDiscountFields sale={sale} onSave={(data) => updateSale.mutate(data)} />
 
               {/* Totals */}
               <Paper variant="outlined" sx={{ p: 1.5 }}>
