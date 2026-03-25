@@ -157,7 +157,6 @@ export default function AddStockPage() {
             showStock
             quickAmounts={[1, 5, 10, 50]}
             autoExpandThreshold={3}
-            variantLimit={3}
             autoFocus
             noMatchMessage={t("common.noProductsFound")}
           />
