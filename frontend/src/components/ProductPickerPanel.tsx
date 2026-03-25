@@ -8,7 +8,7 @@ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import InventoryIcon from "@mui/icons-material/Inventory2";
 import SearchIcon from "@mui/icons-material/Search";
 import { useProducts, useProduct, useCategories, useLocations } from "../api/hooks";
-import { variantLabel } from "../utils/variantLabel";
+import { variantLabel, sortVariants } from "../utils/variantLabel";
 import type { Product, ProductVariant } from "../types/api";
 import { useTranslation } from "react-i18next";
 
@@ -77,8 +77,10 @@ function VariantRows({
   if (isLoading) return <Box sx={{ p: 1.5 }}><CircularProgress size={16} /></Box>;
   if (!detail) return null;
 
-  let active = detail.variants.filter((v) => v.isActive && (!showStock || v.totalStock > 0));
-  if (variantSort === "stockAsc") active = [...active].sort((a, b) => a.totalStock - b.totalStock);
+  const filtered = detail.variants.filter((v) => v.isActive && (!showStock || v.totalStock > 0));
+  const active = variantSort === "stockAsc"
+    ? [...filtered].sort((a, b) => a.totalStock - b.totalStock)
+    : sortVariants(filtered);
 
   if (active.length === 0 && showStock) {
     return (

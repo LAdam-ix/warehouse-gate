@@ -39,7 +39,7 @@ import {
 import { useConfirm } from "../../components/ConfirmDialog";
 import { AddStockDialog } from "../../components/AddStockDialog";
 import { TransferStockDialog } from "../../components/TransferStockDialog";
-import { variantLabel } from "../../utils/variantLabel";
+import { variantLabel, sortVariants } from "../../utils/variantLabel";
 import type {
   ProductDetail, ProductUpdate, ProductVariant, ProductCostWrite,
   VariantAttribute, AttributeValue, ProductionRequest,
@@ -725,16 +725,6 @@ function VariantManager({
     toast.success(t("variants.updated"));
   };
 
-  const sortVariants = (vs: typeof variants) =>
-    [...vs].sort((a, b) => {
-      // Sort by each attribute value's sortOrder in sequence, then fall back to label
-      for (let i = 0; i < Math.max(a.attributeValues.length, b.attributeValues.length); i++) {
-        const ao = a.attributeValues[i]?.sortOrder ?? 0;
-        const bo = b.attributeValues[i]?.sortOrder ?? 0;
-        if (ao !== bo) return ao - bo;
-      }
-      return variantLabel(a.attributeValues).localeCompare(variantLabel(b.attributeValues));
-    });
   const activeVariants = sortVariants(variants.filter((v) => v.isActive));
   const archivedVariants = sortVariants(variants.filter((v) => !v.isActive));
   const confirm = useConfirm();
