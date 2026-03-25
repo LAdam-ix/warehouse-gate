@@ -59,6 +59,7 @@ class StockMovement(models.Model):
     """
     class MovementType(models.TextChoices):
         PRODUCED = "produced", "Produced / Received"
+        FULFILLED = "fulfilled", "Production Fulfilled"
         SOLD = "sold", "Sold"
         DAMAGED = "damaged", "Damaged / Lost"
         ADJUSTMENT = "adjustment", "Manual Adjustment"

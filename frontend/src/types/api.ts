@@ -260,6 +260,13 @@ export interface TransferStockPayload {
   movementDate?: string;
 }
 
+export interface BatchTransferPayload {
+  lines: { variantId: string; fromLocationId: string; quantity: number }[];
+  toLocationId: string;
+  note?: string;
+  movementDate?: string;
+}
+
 // ─── Sale ─────────────────────────────────────────────────────────────────────
 
 export interface Sale {

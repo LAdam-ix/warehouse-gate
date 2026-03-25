@@ -62,6 +62,18 @@ export const intQtyInputProps = {
 } as const;
 
 /**
+ * onKeyDown handler for decimal number fields (prices, rates, costs).
+ * Blocks 'e', 'E', '+' which browsers allow in type="number" inputs.
+ * Allows digits, minus, dot, comma, and control keys.
+ *
+ * @example
+ * <TextField type="number" onKeyDown={blockNonDecimal} />
+ */
+export const blockNonDecimal = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  if (['e', 'E', '+'].includes(e.key)) e.preventDefault();
+};
+
+/**
  * Strip keys from an object before sending to the API.
  * Use when your form type extends the API type with extra form-only fields.
  *

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { blockNonDecimal } from "../../utils/form";
 import {
   Box, Button, CircularProgress, Divider, FormControl, FormControlLabel, IconButton,
   InputLabel, MenuItem, Paper, Select, Stack, Switch, TextField, Tooltip, Typography,
@@ -77,6 +78,37 @@ function LocationRow({ loc, onRefresh }: { loc: { id: string; name: string; isDe
         </>
       )}
     </Stack>
+  );
+}
+
+function EnergyRateField({ value, onSave, disabled }: { value: string | null; onSave: (v: string | null) => void; disabled: boolean }) {
+  const { t } = useTranslation();
+  const [local, setLocal] = useState(value ?? "");
+  useEffect(() => { setLocal(value ?? ""); }, [value]);
+
+  const save = () => {
+    const trimmed = local.trim();
+    const next = trimmed === "" ? null : trimmed;
+    if (next !== value) onSave(next);
+  };
+
+  return (
+    <Box>
+      <Typography variant="body2" fontWeight="medium" gutterBottom>{t("settings.costDefaults")}</Typography>
+      <TextField
+        label={t("settings.defaultEnergyRate")}
+        type="number"
+        size="small"
+        value={local}
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => { blockNonDecimal(e as React.KeyboardEvent<HTMLInputElement>); if (e.key === "Enter") save(); }}
+        disabled={disabled}
+        slotProps={{ htmlInput: { step: "0.0001", min: 0 } }}
+        helperText={t("settings.defaultEnergyRateHelper")}
+        sx={{ maxWidth: 220 }}
+      />
+    </Box>
   );
 }
 
@@ -247,19 +279,11 @@ export function WarehouseSettings() {
                 </Stack>
               </Box>
               <Divider />
-              <Box>
-                <Typography variant="body2" fontWeight="medium" gutterBottom>{t("settings.costDefaults")}</Typography>
-                <TextField
-                  label={t("settings.defaultEnergyRate")}
-                  type="number"
-                  size="small"
-                  value={wSettings?.defaultEnergyRate ?? ""}
-                  onChange={(e) => updateWSettings.mutate({ defaultEnergyRate: e.target.value || null })}
-                  slotProps={{ htmlInput: { step: "0.0001", min: 0 } }}
-                  helperText={t("settings.defaultEnergyRateHelper")}
-                  sx={{ maxWidth: 220 }}
-                />
-              </Box>
+              <EnergyRateField
+                value={wSettings?.defaultEnergyRate ?? null}
+                onSave={(val) => updateWSettings.mutate({ defaultEnergyRate: val })}
+                disabled={updateWSettings.isPending}
+              />
               {isDirty && (
                 <Button
                   variant="contained"

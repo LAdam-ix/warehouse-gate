@@ -91,12 +91,14 @@ class ProductionRequestViewSet(FirmScopedMixin, viewsets.ModelViewSet):
             ts = localtime(timezone.now()).strftime("%Y-%m-%d %H:%M")
             requester = prod_req.created_by.name if prod_req.created_by else "—"
             auto_note = f"Fulfilled production request for {prod_req.variant} — requested by {requester} — {ts}"
+            from warehouse.models import StockMovement
             add_stock(
                 variant=prod_req.variant,
                 location=location,
                 quantity=quantity,
                 note=note or auto_note,
                 user=user,
+                movement_type=StockMovement.MovementType.FULFILLED,
             )
 
         prod_req.status = ProductionRequest.Status.FULFILLED

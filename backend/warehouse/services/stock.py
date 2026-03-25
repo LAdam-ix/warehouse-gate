@@ -55,6 +55,7 @@ def add_stock(
     movement_date=None,
     user=None,
     batch_id=None,
+    movement_type: str = StockMovement.MovementType.PRODUCED,
 ) -> StockMovement:
     """Add produced/received stock. quantity must be positive."""
     if quantity <= 0:
@@ -70,7 +71,7 @@ def add_stock(
     movement = StockMovement.objects.create(
         variant=variant,
         location=location,
-        movement_type=StockMovement.MovementType.PRODUCED,
+        movement_type=movement_type,
         quantity_delta=quantity,
         note=note,
         movement_date=movement_date or timezone.now(),
@@ -228,3 +229,56 @@ def transfer_stock(
         created_by=user,
     )
     return out_movement, in_movement
+
+
+# Movement types that can be reverted (manual operations only)
+REVERTABLE_TYPES = {
+    StockMovement.MovementType.PRODUCED,
+    StockMovement.MovementType.ADJUSTMENT,
+    StockMovement.MovementType.TRANSFER_OUT,
+    StockMovement.MovementType.TRANSFER_IN,
+}
+
+
+@transaction.atomic
+def revert_movement(*, movement: StockMovement, user=None):
+    """
+    Revert the most recent manual stock movement.
+    Reverses the quantity delta on the stock entry, then deletes the movement.
+    For transfers, also finds and reverts the paired movement.
+    In strict mode, refuses if reverting would make stock negative.
+    """
+    if movement.movement_type not in REVERTABLE_TYPES:
+        raise ValueError(f"Cannot revert movement of type '{movement.movement_type}'")
+
+    firm = movement.variant.product.firm
+
+    def _undo(mv):
+        entry = _get_or_create_entry(mv.variant, mv.location)
+        new_qty = entry.quantity - mv.quantity_delta
+        # In strict mode, block if reverting would make stock negative
+        if firm.warehouse_mode == Firm.WarehouseMode.STRICT and new_qty < 0:
+            raise InsufficientStockError(mv.variant, entry.quantity, mv.quantity_delta)
+        entry.quantity = new_qty
+        entry.save(update_fields=["quantity"])
+        mv.delete()
+
+    # For transfers, find the paired movement (same note + timestamp, opposite type)
+    if movement.movement_type in (
+        StockMovement.MovementType.TRANSFER_OUT,
+        StockMovement.MovementType.TRANSFER_IN,
+    ):
+        paired_type = (
+            StockMovement.MovementType.TRANSFER_IN
+            if movement.movement_type == StockMovement.MovementType.TRANSFER_OUT
+            else StockMovement.MovementType.TRANSFER_OUT
+        )
+        paired = StockMovement.objects.filter(
+            variant=movement.variant,
+            movement_type=paired_type,
+            movement_date=movement.movement_date,
+        ).first()
+        if paired:
+            _undo(paired)
+
+    _undo(movement)

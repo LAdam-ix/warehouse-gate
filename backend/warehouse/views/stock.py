@@ -12,8 +12,9 @@ from warehouse.serializers.stock import (
     AddStockSerializer,
     AdjustStockSerializer,
     TransferStockSerializer,
+    BatchTransferSerializer,
 )
-from warehouse.services.stock import add_stock, adjust_stock, transfer_stock
+from warehouse.services.stock import add_stock, adjust_stock, transfer_stock, revert_movement, REVERTABLE_TYPES
 from .base import FirmScopedMixin
 
 
@@ -64,6 +65,37 @@ class StockMovementViewSet(FirmScopedMixin, viewsets.ReadOnlyModelViewSet):
         if movement_type:
             qs = qs.filter(movement_type=movement_type)
         return qs
+
+    @action(detail=True, methods=["post"])
+    def revert(self, request, pk=None):
+        """Revert a manual stock movement. Only the most recent movement can be reverted."""
+        movement = self.get_object()
+
+        if movement.movement_type not in REVERTABLE_TYPES:
+            return Response(
+                {"detail": f"Cannot revert {movement.movement_type} movements."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Check it's the latest movement for this variant+location
+        newer = StockMovement.objects.filter(
+            variant=movement.variant,
+            location=movement.location,
+            created_at__gt=movement.created_at,
+        ).exists()
+        if newer:
+            return Response(
+                {"detail": "Can only revert the most recent movement for this variant/location."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from warehouse.services.stock import InsufficientStockError
+        try:
+            revert_movement(movement=movement, user=request.wh_user)
+        except (ValueError, InsufficientStockError) as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AddStockView(APIView):
@@ -203,3 +235,60 @@ class TransferStockView(APIView):
             "out": StockMovementSerializer(out_mv).data,
             "in": StockMovementSerializer(in_mv).data,
         }, status=200)
+
+
+class BatchTransferView(APIView):
+    """
+    Bulk transfer — move multiple items to one destination.
+    POST /api/v1/stock/batch-transfer/
+    """
+    permission_classes = [__import__("warehouse.permissions", fromlist=["CanEditWarehouse"]).CanEditWarehouse]
+
+    def post(self, request):
+        serializer = BatchTransferSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        firm = request.wh_firm
+
+        to_loc = Location.objects.filter(id=data["to_location_id"], firm=firm).first()
+        if not to_loc:
+            return Response({"detail": "Destination location not found."}, status=404)
+
+        from warehouse.services.stock import InsufficientStockError
+
+        batch_id = uuid.uuid4()
+        results = []
+        errors = []
+
+        for line in data["lines"]:
+            variant = ProductVariant.objects.filter(id=line["variant_id"], product__firm=firm).first()
+            if not variant:
+                errors.append({"variantId": str(line["variant_id"]), "error": "Not found"})
+                continue
+
+            from_loc = Location.objects.filter(id=line["from_location_id"], firm=firm).first()
+            if not from_loc:
+                errors.append({"variantId": str(line["variant_id"]), "error": "Source location not found"})
+                continue
+
+            try:
+                out_mv, in_mv = transfer_stock(
+                    variant=variant,
+                    from_location=from_loc,
+                    to_location=to_loc,
+                    quantity=line["quantity"],
+                    note=data.get("note", ""),
+                    movement_date=data.get("movement_date"),
+                    user=request.wh_user,
+                )
+                # stamp batch_id on both movements
+                StockMovement.objects.filter(id__in=[out_mv.id, in_mv.id]).update(batch_id=batch_id)
+                results.append({"variantId": str(variant.id), "quantity": line["quantity"]})
+            except InsufficientStockError as e:
+                errors.append({"variantId": str(line["variant_id"]), "error": str(e)})
+
+        return Response({
+            "transfersCompleted": len(results),
+            "errors": errors,
+            "batchId": str(batch_id),
+        }, status=201)

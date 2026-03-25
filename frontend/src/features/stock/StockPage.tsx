@@ -10,10 +10,14 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import AddIcon from "@mui/icons-material/Add";
-import { useLocations, useStockMovements } from "../../api/hooks";
-import { TransferStockDialog } from "../../components/TransferStockDialog";
+import UndoIcon from "@mui/icons-material/Undo";
+import { toast } from "react-toastify";
+import { useLocations, useStockMovements, useRevertMovement } from "../../api/hooks";
+import { useConfirm } from "../../components/ConfirmDialog";
 import type { StockMovement } from "../../types/api";
 import { useTranslation } from "react-i18next";
+
+const REVERTABLE_TYPES = new Set(["produced", "adjustment", "transfer_out", "transfer_in"]);
 
 // ─── Movement log grouping ────────────────────────────────────────────────────
 
@@ -46,12 +50,30 @@ function groupMovements(movements: StockMovement[]): MovementGroup[] {
 function MovementGroupRow({ group, showLocations }: { group: MovementGroup; showLocations: boolean }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const revert = useRevertMovement();
+  const confirm = useConfirm();
   const isBatch = group.batchId !== null && group.movements.length > 1;
   const first = group.movements[0];
   const totalDelta = group.movements.reduce((s, m) => s + m.quantityDelta, 0);
 
+  const handleRevert = async (m: StockMovement) => {
+    const ok = await confirm(
+      t("stock.revertConfirm", { variant: m.variantName, qty: Math.abs(m.quantityDelta) }),
+      { title: t("stock.revertTitle"), confirmLabel: t("stock.revert") },
+    );
+    if (!ok) return;
+    try {
+      await revert.mutateAsync(m.id);
+      toast.success(t("stock.reverted"));
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast.error(msg ?? t("stock.revertFailed"));
+    }
+  };
+
   if (!isBatch) {
     const m = first;
+    const canRevert = REVERTABLE_TYPES.has(m.movementType);
     return (
       <TableRow hover>
         <TableCell>
@@ -78,7 +100,14 @@ function MovementGroupRow({ group, showLocations }: { group: MovementGroup; show
           </Typography>
         </TableCell>
         <TableCell>
-          <Typography variant="caption" color="text.secondary">{m.note}</Typography>
+          <Stack direction="row" alignItems="center" spacing={0.5}>
+            <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>{m.note}</Typography>
+            {canRevert && (
+              <IconButton size="small" onClick={() => handleRevert(m)} disabled={revert.isPending} title={t("stock.revert")}>
+                <UndoIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            )}
+          </Stack>
         </TableCell>
       </TableRow>
     );
@@ -151,7 +180,6 @@ export default function StockPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [movTypeFilter, setMovTypeFilter] = useState("");
-  const [transferOpen, setTransferOpen] = useState(false);
   const { data: locationsData } = useLocations();
   const { data: movements, isLoading } = useStockMovements(
     movTypeFilter ? { movement_type: movTypeFilter } : undefined
@@ -161,7 +189,7 @@ export default function StockPage() {
   const showLocations = locations.length > 1;
 
   const MOVEMENT_TYPE_KEYS = [
-    "produced", "sold", "damaged", "adjustment", "returned", "refund_return", "transfer_in", "transfer_out",
+    "produced", "fulfilled", "sold", "damaged", "adjustment", "returned", "refund_return", "transfer_in", "transfer_out",
   ];
 
   return (
@@ -184,13 +212,11 @@ export default function StockPage() {
           </Select>
         </FormControl>
         {showLocations && (
-          <Button variant="outlined" size="small" startIcon={<SwapHorizIcon />} onClick={() => setTransferOpen(true)}>
+          <Button variant="outlined" size="small" startIcon={<SwapHorizIcon />} onClick={() => navigate("/stock/transfer")}>
             {t("stock.transfer")}
           </Button>
         )}
       </Stack>
-
-      <TransferStockDialog open={transferOpen} onClose={() => setTransferOpen(false)} />
 
       <Paper variant="outlined">
         {isLoading && <Box sx={{ p: 3, textAlign: "center" }}><CircularProgress /></Box>}

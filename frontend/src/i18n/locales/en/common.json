@@ -242,6 +242,11 @@
     "title": "Stock Log",
     "addStock": "Add Stock",
     "transfer": "Transfer",
+    "revert": "Undo",
+    "revertTitle": "Undo stock movement",
+    "revertConfirm": "Undo {{qty}} units of {{variant}}? This will reverse the stock change and delete the log entry.",
+    "reverted": "Movement reverted",
+    "revertFailed": "Could not revert this movement",
     "filterType": "Filter type",
     "allMovements": "All movements",
     "date": "Date",
@@ -253,6 +258,7 @@
     "batchItems": "Batch — {{count}} items",
     "movementType": {
       "produced": "Produced",
+      "fulfilled": "Production fulfilled",
       "sold": "Sold",
       "damaged": "Write-off",
       "adjustment": "Adjustment",
@@ -286,6 +292,17 @@
       "transfer": "Transfer",
       "transferred": "Stock transferred",
       "transferFailed": "Transfer failed"
+    },
+    "transferPage": {
+      "title": "Transfer Stock",
+      "toTransfer": "To transfer",
+      "destination": "Destination location",
+      "clickToAdd": "Click a product to add it to the transfer list.",
+      "noProducts": "No products with stock available.",
+      "invalidSources": "Some items have no source location or same as destination.",
+      "transferred": "Transferred {{count}} item(s)",
+      "transferFailed": "Transfer failed",
+      "confirm": "Transfer {{count}} unit(s)"
     }
   },
   "sales": {

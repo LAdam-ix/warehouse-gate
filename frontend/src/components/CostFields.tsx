@@ -3,6 +3,7 @@ import { Box, Button, Collapse, Grid, TextField, Typography } from "@mui/materia
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import type { ProductCostWrite } from "../types/api";
+import { blockNonDecimal } from "../utils/form";
 import { useTranslation } from "react-i18next";
 
 interface Props {
@@ -50,32 +51,32 @@ export default function CostFields({ cost, onChange, defaultOpen = false, defaul
             <Grid size={{ xs: 6 }}>
               <TextField label={t("costFields.material")} type="number" fullWidth size="small"
                 value={get("material")} onChange={(e) => set("material", e.target.value)}
-                inputProps={{ step: "0.01", min: 0 }} />
+                onKeyDown={blockNonDecimal} inputProps={{ step: "0.01", min: 0 }} />
             </Grid>
             <Grid size={{ xs: 6 }}>
               <TextField label={t("costFields.other")} type="number" fullWidth size="small"
                 value={get("other")} onChange={(e) => set("other", e.target.value)}
-                inputProps={{ step: "0.01", min: 0 }} />
+                onKeyDown={blockNonDecimal} inputProps={{ step: "0.01", min: 0 }} />
             </Grid>
             <Grid size={{ xs: 6 }}>
               <TextField label={t("costFields.energyKwh")} type="number" fullWidth size="small"
                 value={get("energyKwh")} onChange={(e) => set("energyKwh", e.target.value)}
-                inputProps={{ step: "0.001", min: 0 }} />
+                onKeyDown={blockNonDecimal} inputProps={{ step: "0.001", min: 0 }} />
             </Grid>
             <Grid size={{ xs: 6 }}>
               <TextField label={t("costFields.energyRate")} type="number" fullWidth size="small"
                 value={get("energyRate")} onChange={(e) => set("energyRate", e.target.value)}
-                inputProps={{ step: "0.0001", min: 0 }} />
+                onKeyDown={blockNonDecimal} inputProps={{ step: "0.0001", min: 0 }} />
             </Grid>
             <Grid size={{ xs: 6 }}>
               <TextField label={t("costFields.laborHours")} type="number" fullWidth size="small"
                 value={get("laborHours")} onChange={(e) => set("laborHours", e.target.value)}
-                inputProps={{ step: "0.25", min: 0 }} />
+                onKeyDown={blockNonDecimal} inputProps={{ step: "0.25", min: 0 }} />
             </Grid>
             <Grid size={{ xs: 6 }}>
               <TextField label={t("costFields.laborRate")} type="number" fullWidth size="small"
                 value={get("laborRate")} onChange={(e) => set("laborRate", e.target.value)}
-                inputProps={{ step: "0.01", min: 0 }} />
+                onKeyDown={blockNonDecimal} inputProps={{ step: "0.01", min: 0 }} />
             </Grid>
             <Grid size={{ xs: 12 }}>
               <TextField label={t("costFields.costNotes")} fullWidth multiline rows={1} size="small"

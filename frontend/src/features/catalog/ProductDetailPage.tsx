@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { blockNonDecimal } from "../../utils/form";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box, Button, Chip, CircularProgress, Dialog, DialogActions,
@@ -303,11 +304,14 @@ function VariantRow({
         </Box>
 
         {/* Stock chips — only locations with actual stock */}
-        <Stack direction="row" spacing={0.5} flexWrap="wrap" justifyContent="flex-end">
+        <Stack direction="row" spacing={0.5} flexWrap="wrap" justifyContent="flex-end" sx={{ minWidth: 80 }}>
           {(() => {
             const locsWithStock = locations.filter((loc) => (variant.stockByLocation?.[loc.id] ?? 0) > 0);
-            if (locsWithStock.length <= 1) {
+            if (locsWithStock.length === 0) {
               return <Chip label={`${variant.totalStock}`} size="small" color={color} />;
+            }
+            if (locsWithStock.length === 1) {
+              return <Chip label={`${locsWithStock[0].name}: ${variant.totalStock}`} size="small" color={color} />;
             }
             return (
               <>
@@ -321,7 +325,7 @@ function VariantRow({
         </Stack>
 
         {/* Price */}
-        <Stack alignItems="flex-end" sx={{ minWidth: 70 }}>
+        <Stack alignItems="flex-end" sx={{ width: 80, flexShrink: 0 }}>
           <Typography variant="body2">€{variant.effectivePrice}</Typography>
           {deltaLabel && (
             <Chip label={deltaLabel} size="small"
@@ -331,7 +335,7 @@ function VariantRow({
         </Stack>
 
         {/* Actions */}
-        <Stack direction="row" spacing={0.25}>
+        <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0 }}>
           {variant.isActive ? (
             <>
               <Tooltip title={t("variants.addStockTooltip")}>
@@ -339,13 +343,11 @@ function VariantRow({
                   <AddIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              {canTransfer && (
-                <Tooltip title={t("variants.transferStockTooltip")}>
-                  <IconButton size="small" onClick={() => setTransferOpen(true)}>
-                    <SwapHorizIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
+              <Tooltip title={t("variants.transferStockTooltip")}>
+                <IconButton size="small" onClick={() => setTransferOpen(true)} sx={{ visibility: canTransfer ? "visible" : "hidden" }}>
+                  <SwapHorizIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
               <Tooltip title={t("variants.editVariantTooltip")}>
                 <IconButton size="small" onClick={openEdit}>
                   <EditIcon fontSize="small" />
@@ -424,6 +426,7 @@ function VariantRow({
               fullWidth
               value={editPriceDelta}
               onChange={(e) => setEditPriceDelta(e.target.value)}
+              onKeyDown={blockNonDecimal}
               slotProps={{ htmlInput: { step: "0.01" } }}
               helperText={t("variants.editVariantDialog.priceDeltaHelper")}
             />
@@ -434,6 +437,7 @@ function VariantRow({
               fullWidth
               value={editCostDelta}
               onChange={(e) => setEditCostDelta(e.target.value)}
+              onKeyDown={blockNonDecimal}
               slotProps={{ htmlInput: { step: "0.01" } }}
               helperText={t("variants.editVariantDialog.costDeltaHelper")}
             />
@@ -1012,6 +1016,7 @@ function VariantManager({
                 label="Price delta (€)" size="small" type="number" sx={{ flex: 1 }}
                 value={valuePriceDelta}
                 onChange={(e) => setValuePriceDelta(e.target.value)}
+                onKeyDown={blockNonDecimal}
                 placeholder="0"
                 slotProps={{ htmlInput: { step: "0.01" } }}
                 helperText="Added to variant price"
@@ -1020,6 +1025,7 @@ function VariantManager({
                 label="Cost delta (€)" size="small" type="number" sx={{ flex: 1 }}
                 value={valueCostDelta}
                 onChange={(e) => setValueCostDelta(e.target.value)}
+                onKeyDown={blockNonDecimal}
                 placeholder="0"
                 slotProps={{ htmlInput: { step: "0.01" } }}
                 helperText="Added to variant cost"
@@ -1100,6 +1106,7 @@ function VariantManager({
               type="number" size="small" fullWidth
               value={variantPriceDelta}
               onChange={(e) => setVariantPriceDelta(e.target.value)}
+              onKeyDown={blockNonDecimal}
               slotProps={{ htmlInput: { step: "0.01" } }}
               helperText={t("variants.addVariantDialog.priceDeltaHelper")}
             />
@@ -1751,9 +1758,9 @@ export default function ProductDetailPage() {
                   <Stack spacing={1.5}>
                     <TextField size="small" fullWidth label={t("productDetail.editDialog.name")} value={overviewForm.name ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, name: e.target.value })} />
                     <TextField size="small" fullWidth multiline rows={2} label={t("productDetail.editDialog.description")} value={overviewForm.description ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, description: e.target.value })} />
-                    <TextField size="small" fullWidth type="number" label={t("productDetail.editDialog.basePrice")} value={overviewForm.basePrice ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, basePrice: e.target.value })} slotProps={{ htmlInput: { step: "0.01" } }} />
+                    <TextField size="small" fullWidth type="number" label={t("productDetail.editDialog.basePrice")} value={overviewForm.basePrice ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, basePrice: e.target.value })} onKeyDown={blockNonDecimal} slotProps={{ htmlInput: { step: "0.01" } }} />
                     {overviewForm.itemType === "service" && (
-                      <TextField size="small" fullWidth type="number" label="Hourly rate (€/h)" value={overviewForm.hourlyRate ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, hourlyRate: e.target.value || null })} slotProps={{ htmlInput: { step: "0.01" } }} />
+                      <TextField size="small" fullWidth type="number" label="Hourly rate (€/h)" value={overviewForm.hourlyRate ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, hourlyRate: e.target.value || null })} onKeyDown={blockNonDecimal} slotProps={{ htmlInput: { step: "0.01" } }} />
                     )}
                     {overviewForm.itemType === "service" && (
                       <FormControl size="small" fullWidth>

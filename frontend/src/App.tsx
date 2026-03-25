@@ -7,6 +7,7 @@ import CatalogPage from "./features/catalog/CatalogPage";
 import ProductDetailPage from "./features/catalog/ProductDetailPage";
 import StockPage from "./features/stock/StockPage";
 import AddStockPage from "./features/stock/AddStockPage";
+import TransferStockPage from "./features/stock/TransferStockPage";
 import SalesPage from "./features/sales/SalesPage";
 import SaleDetailPage from "./features/sales/SaleDetailPage";
 import WriteOffPage from "./features/writeoffs/WriteOffPage";
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="catalog/:productId" element={<ProductDetailPage />} />
             <Route path="stock" element={<StockPage />} />
             <Route path="stock/add" element={<AddStockPage />} />
+            <Route path="stock/transfer" element={<TransferStockPage />} />
             <Route path="sales" element={<SalesPage />} />
             <Route path="sales/:saleId" element={<SaleDetailPage />} />
             <Route path="writeoffs" element={<WriteOffPage />} />

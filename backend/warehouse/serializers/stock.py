@@ -91,3 +91,16 @@ class TransferStockSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(min_value=1)
     note = serializers.CharField(required=False, allow_blank=True, default="")
     movement_date = serializers.DateTimeField(required=False, default=timezone.now)
+
+
+class BatchTransferSerializer(serializers.Serializer):
+    """Input for bulk transfer — many items to one destination."""
+    class TransferLineSerializer(serializers.Serializer):
+        variant_id = serializers.UUIDField()
+        from_location_id = serializers.UUIDField()
+        quantity = serializers.IntegerField(min_value=1)
+
+    lines = TransferLineSerializer(many=True)
+    to_location_id = serializers.UUIDField()
+    note = serializers.CharField(required=False, allow_blank=True, default="")
+    movement_date = serializers.DateTimeField(required=False, default=timezone.now)

@@ -9,7 +9,7 @@ import type {
   AttributeValueCreate, AttributeValueUpdate,
   Location, LocationCreate, LocationUpdate,
   StockEntry, StockMovement,
-  AddStockPayload, AdjustStockPayload, TransferStockPayload,
+  AddStockPayload, AdjustStockPayload, TransferStockPayload, BatchTransferPayload,
   Sale, SaleCreate, SaleWrite,
   SaleLine, SaleLineCreate, SaleLineUpdate,
   DamageReport, DamageReportCreate,
@@ -405,6 +405,34 @@ export const useTransferStock = () => {
       qc.invalidateQueries({ queryKey: ["stock-entries"] });
       qc.invalidateQueries({ queryKey: ["stock-movements"] });
       qc.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+};
+
+export const useBatchTransfer = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: BatchTransferPayload) =>
+      post<{ transfersCompleted: number; errors: unknown[]; batchId: string }>("/stock/batch-transfer/", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["stock-entries"] });
+      qc.invalidateQueries({ queryKey: ["stock-movements"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["variants"] });
+    },
+  });
+};
+
+export const useRevertMovement = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (movementId: string) =>
+      post(`/stock-movements/${movementId}/revert/`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["stock-entries"] });
+      qc.invalidateQueries({ queryKey: ["stock-movements"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["variants"] });
     },
   });
 };
