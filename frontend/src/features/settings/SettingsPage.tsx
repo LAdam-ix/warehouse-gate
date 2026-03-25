@@ -246,6 +246,20 @@ export function WarehouseSettings() {
                   />
                 </Stack>
               </Box>
+              <Divider />
+              <Box>
+                <Typography variant="body2" fontWeight="medium" gutterBottom>{t("settings.costDefaults")}</Typography>
+                <TextField
+                  label={t("settings.defaultEnergyRate")}
+                  type="number"
+                  size="small"
+                  value={wSettings?.defaultEnergyRate ?? ""}
+                  onChange={(e) => updateWSettings.mutate({ defaultEnergyRate: e.target.value || null })}
+                  slotProps={{ htmlInput: { step: "0.0001", min: 0 } }}
+                  helperText={t("settings.defaultEnergyRateHelper")}
+                  sx={{ maxWidth: 220 }}
+                />
+              </Box>
               {isDirty && (
                 <Button
                   variant="contained"

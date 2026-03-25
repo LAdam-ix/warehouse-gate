@@ -33,6 +33,7 @@ import {
   useCreateVariant, useCreateAttribute, useUpdateAttribute, useReorderAttributes, useDeleteAttribute,
   useCreateAttributeValue, useUpdateAttributeValue, useDeleteAttributeValue, useReorderAttributeValues,
   useProductionRequests, useCreateProductionRequest, useFulfillProductionRequest, useCancelProductionRequest,
+  useWarehouseSettings,
 } from "../../api/hooks";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { AddStockDialog } from "../../components/AddStockDialog";
@@ -1600,6 +1601,7 @@ export default function ProductDetailPage() {
   const { t } = useTranslation();
   const { data: product, isLoading } = useProduct(productId!);
   const { data: tree } = useProductTree(productId!);
+  const { data: wSettings } = useWarehouseSettings();
   const { data: categories } = useCategories();
   const createCategory = useCreateCategory();
   const update = useUpdateProduct(productId!);
@@ -2033,7 +2035,7 @@ export default function ProductDetailPage() {
               )}
             </Stack>
             {costEdit ? (
-              <CostFields cost={costForm} onChange={setCostForm} defaultOpen />
+              <CostFields cost={costForm} onChange={setCostForm} defaultOpen defaultEnergyRate={wSettings?.defaultEnergyRate} />
             ) : !product.cost ? (
               <Typography color="text.secondary" variant="body2">{t("productDetail.noCostData")}</Typography>
             ) : (

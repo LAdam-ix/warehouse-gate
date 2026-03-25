@@ -467,6 +467,7 @@ type CreateForm = {
 function CreateProductDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const { data: categories } = useCategories();
+  const { data: wSettings } = useWarehouseSettings();
   const createProduct = useCreateProduct();
   const navigate = useNavigate();
   const [form, setForm] = useState<CreateForm>({
@@ -533,7 +534,7 @@ function CreateProductDialog({ open, onClose }: { open: boolean; onClose: () => 
             </Box>
           )}
 
-          <CostFields cost={form.cost} onChange={(cost) => setForm({ ...form, cost })} />
+          <CostFields cost={form.cost} onChange={(cost) => setForm({ ...form, cost })} defaultEnergyRate={wSettings?.defaultEnergyRate} />
         </Stack>
       </DialogContent>
       <DialogActions>

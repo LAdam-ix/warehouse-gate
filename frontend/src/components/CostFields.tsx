@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Box, Button, Collapse, Grid, TextField, Typography } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
@@ -9,6 +9,7 @@ interface Props {
   cost: ProductCostWrite | null | undefined;
   onChange: (cost: ProductCostWrite) => void;
   defaultOpen?: boolean;
+  defaultEnergyRate?: string | null;
 }
 
 const EMPTY: ProductCostWrite = {
@@ -16,7 +17,7 @@ const EMPTY: ProductCostWrite = {
   laborHours: "", laborRate: "", other: "", notes: "",
 };
 
-export default function CostFields({ cost, onChange, defaultOpen = false }: Props) {
+export default function CostFields({ cost, onChange, defaultOpen = false, defaultEnergyRate }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(defaultOpen);
 
@@ -25,6 +26,13 @@ export default function CostFields({ cost, onChange, defaultOpen = false }: Prop
 
   const set = (key: keyof ProductCostWrite, value: string) =>
     onChange({ ...(cost ?? EMPTY), [key]: value });
+
+  // Pre-fill energy rate from settings if not already set
+  useEffect(() => {
+    if (defaultEnergyRate && !get("energyRate")) {
+      set("energyRate", defaultEnergyRate);
+    }
+  }, [defaultEnergyRate]);
 
   return (
     <Box>

@@ -40,6 +40,9 @@ class FirmSettingsView(APIView):
 class WarehouseSettingsSerializer(serializers.Serializer):
     show_sku = serializers.BooleanField(required=False)
     skip_confirm = serializers.BooleanField(required=False)
+    default_energy_rate = serializers.DecimalField(
+        max_digits=10, decimal_places=4, required=False, allow_null=True
+    )
 
 
 class WarehouseSettingsView(APIView):
@@ -66,6 +69,9 @@ class WarehouseSettingsView(APIView):
         if "skip_confirm" in serializer.validated_data:
             settings_obj.skip_confirm = serializer.validated_data["skip_confirm"]
             update_fields.append("skip_confirm")
+        if "default_energy_rate" in serializer.validated_data:
+            settings_obj.default_energy_rate = serializer.validated_data["default_energy_rate"]
+            update_fields.append("default_energy_rate")
         if update_fields:
             settings_obj.save(update_fields=update_fields)
         return Response(WarehouseSettingsSerializer(settings_obj).data)

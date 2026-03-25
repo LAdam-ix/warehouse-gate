@@ -31,6 +31,7 @@ export type FirmUpdate = Partial<Pick<Firm, "warehouseMode">>;
 export interface WarehouseSettings {
   showSku: boolean;
   skipConfirm: boolean;
+  defaultEnergyRate: string | null;
 }
 
 export type WarehouseSettingsUpdate = Partial<WarehouseSettings>;

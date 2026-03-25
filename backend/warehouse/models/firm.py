@@ -1,10 +1,19 @@
 """
-Stub User + Firm + access models.
-When merging into fakturuj si:
+Stub User, Firm, and access models — stand-ins until this module is merged into fakturuj si.
+
+DO NOT add new business logic or fields to User, Firm, or UserWarehouseAccess.
+These classes exist only to make the warehouse module runnable in isolation.
+All warehouse-specific settings and preferences belong in WarehouseSettings below.
+
+If a new warehouse feature genuinely needs something from the core Firm (e.g. a currency
+or locale field), add it to WarehouseSettings here — not to Firm. Only in the final merge
+into fakturuj si should Firm/User be extended, and even then only if the core team agrees.
+
+Merge checklist:
   - Replace User with core.models.User
   - Replace Firm with core.models.Firm
-  - Replace UserWarehouseAccess with an entry in core's permission system
-  - Add warehouse_mode to core's Firm model
+  - Replace UserWarehouseAccess with core's permission system
+  - Move warehouse_mode onto core's Firm model
 """
 import uuid
 from django.db import models
@@ -13,8 +22,7 @@ from .base import AuditModel
 
 class User(AuditModel):
     """
-    Stub user — swapped for fakturuj si User on merge.
-    created_by/updated_by on AuditModel self-reference this model.
+    Stub user — swapped for fakturuj si User on merge. DO NOT EXTEND.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
@@ -30,8 +38,9 @@ class User(AuditModel):
 
 class Firm(AuditModel):
     """
-    Stub firm — swapped for fakturuj si Firm on merge.
-    warehouse_mode will become a field on fakturuj si's Firm.
+    Stub firm — swapped for fakturuj si Firm on merge. DO NOT EXTEND.
+    warehouse_mode is the only field here because it belongs on the core Firm model;
+    everything else warehouse-specific goes in WarehouseSettings.
     """
     class WarehouseMode(models.TextChoices):
         STRICT = "strict", "Strict (block negative stock)"
@@ -90,6 +99,10 @@ class WarehouseSettings(models.Model):
     skip_confirm = models.BooleanField(
         default=False,
         help_text="Skip destructive-action confirmation dialogs (demo / power-user mode).",
+    )
+    default_energy_rate = models.DecimalField(
+        max_digits=10, decimal_places=4, null=True, blank=True,
+        help_text="Default energy cost per kWh (€). Pre-filled in production cost forms.",
     )
 
     @classmethod
