@@ -280,14 +280,17 @@ export default function SaleDetailPage() {
   const currentNoteValue = noteValue !== null ? noteValue : (sale.note ?? "");
   const defaultLocationId = locations.find((l) => l.isDefault)?.id ?? locations[0]?.id ?? null;
 
-  const handleAddLine: ProductPickerSelectFn = async (variant, label, product) => {
+  // TODO: Same product from different locations creates separate lines (for stock tracking).
+  // When generating an invoice, merge lines with the same variant into one invoice line
+  // (customer doesn't care which location it came from, only total quantity × price).
+  const handleAddLine: ProductPickerSelectFn = async (variant, label, product, qty = 1) => {
     if (addLine.isPending) return;
     const isHourly = product.servicePricing === "hourly";
     const price = (isHourly && product.hourlyRate) ? product.hourlyRate : (variant.effectivePrice ?? "0.00");
     await addLine.mutateAsync({
       variant: variant.id,
       description: label,
-      ...(isHourly ? { hours: "1" } : { quantity: "1" }),
+      ...(isHourly ? { hours: String(qty) } : { quantity: String(qty) }),
       unitPrice: price,
       location: defaultLocationId,
       discountAmount: "0",
@@ -399,6 +402,8 @@ export default function SaleDetailPage() {
           <Grid size={{ xs: 12, sm: 5 }}>
             <ProductPickerPanel
               onSelect={handleAddLine}
+              showStock
+              quickAmounts={[1, 5]}
               filterFn={firm?.warehouseMode === "strict"
                 ? (p) => p.itemType === "service" || p.totalStock > 0
                 : undefined}

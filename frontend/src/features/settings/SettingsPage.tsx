@@ -7,22 +7,30 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import { toast } from "react-toastify";
 import {
   useFirm, useUpdateFirm, useWarehouseSettings, useUpdateWarehouseSettings,
-  useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation,
+  useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation, useMoveLocation,
 } from "../../api/hooks";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { useTranslation } from "react-i18next";
 
-function LocationRow({ loc, onRefresh }: { loc: { id: string; name: string; isDefault: boolean; isActive: boolean }; onRefresh: () => void }) {
+function LocationRow({ loc, isFirst, isLast, onRefresh }: {
+  loc: { id: string; name: string; isDefault: boolean; isActive: boolean };
+  isFirst: boolean;
+  isLast: boolean;
+  onRefresh: () => void;
+}) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(loc.name);
   const update = useUpdateLocation(loc.id);
   const del = useDeleteLocation();
+  const move = useMoveLocation();
   const confirm = useConfirm();
 
   const save = async () => {
@@ -37,7 +45,7 @@ function LocationRow({ loc, onRefresh }: { loc: { id: string; name: string; isDe
   };
 
   return (
-    <Stack direction="row" alignItems="center" spacing={1}>
+    <Stack direction="row" alignItems="center" spacing={0.5}>
       {editing ? (
         <>
           <TextField size="small" value={editName} onChange={(e) => setEditName(e.target.value)}
@@ -47,6 +55,17 @@ function LocationRow({ loc, onRefresh }: { loc: { id: string; name: string; isDe
         </>
       ) : (
         <>
+          {/* Up / Down arrows */}
+          <Stack spacing={-0.5}>
+            <IconButton size="small" disabled={isFirst || move.isPending}
+              onClick={() => move.mutate({ id: loc.id, direction: "up" })}>
+              <KeyboardArrowUpIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+            <IconButton size="small" disabled={isLast || move.isPending}
+              onClick={() => move.mutate({ id: loc.id, direction: "down" })}>
+              <KeyboardArrowDownIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Stack>
           <Typography variant="body2" sx={{ flex: 1 }}>
             {loc.name}
             {loc.isDefault && <Typography component="span" variant="caption" color="primary" sx={{ ml: 0.75 }}>{t("settings.locations.defaultLabel")}</Typography>}
@@ -130,8 +149,8 @@ function LocationsSettings() {
       <Typography variant="subtitle1" fontWeight="bold" gutterBottom>{t("settings.locations.title")}</Typography>
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Stack spacing={1.5}>
-          {locations?.map((loc) => (
-            <LocationRow key={loc.id} loc={loc} onRefresh={() => refetch()} />
+          {locations?.map((loc, i) => (
+            <LocationRow key={loc.id} loc={loc} isFirst={i === 0} isLast={i === (locations.length - 1)} onRefresh={() => refetch()} />
           ))}
 
           <Divider />

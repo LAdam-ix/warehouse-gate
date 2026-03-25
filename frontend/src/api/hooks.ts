@@ -355,6 +355,15 @@ export const useDeleteLocation = () => {
   });
 };
 
+export const useMoveLocation = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, direction }: { id: string; direction: "up" | "down" }) =>
+      post<Location[]>(`/locations/${id}/move-${direction}/`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["locations"] }),
+  });
+};
+
 // ─── Stock ───────────────────────────────────────────────────────────────────
 
 export const useStockEntries = (params?: Record<string, unknown>, options: { enabled?: boolean } = {}) =>

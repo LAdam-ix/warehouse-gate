@@ -170,7 +170,7 @@ export default function WriteOffNewPage() {
   const defaultLocationId =
     locations?.find((l) => l.isDefault)?.id ?? locations?.[0]?.id ?? "";
 
-  const handleAdd: import("../../components/ProductPickerPanel").ProductPickerSelectFn = (v, label) => {
+  const handleAdd: import("../../components/ProductPickerPanel").ProductPickerSelectFn = (v, label, _product, qty = 1) => {
     setCart((prev) => [
       ...prev,
       {
@@ -178,7 +178,7 @@ export default function WriteOffNewPage() {
         variantId: v.id,
         variantLabel: label,
         locationId: defaultLocationId,
-        quantity: 1,
+        quantity: qty,
         reason: "",
         customReason: "",
         note: "",
@@ -242,6 +242,7 @@ export default function WriteOffNewPage() {
             onSelect={handleAdd}
             queryParams={{ item_type: "physical", has_stock: true }}
             showStock
+            quickAmounts={[1, 5]}
             autoFocus
             emptyMessage={t("writeoffs.newPage.noPhysicalItems")}
             noMatchMessage={t("writeoffs.newPage.noProductsMatch")}

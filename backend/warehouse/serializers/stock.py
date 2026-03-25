@@ -8,7 +8,7 @@ class LocationSerializer(serializers.ModelSerializer):
         model = Location
         fields = [
             "id", "name", "description", "is_default", "is_active",
-            "created_at", "updated_at",
+            "sort_order", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 

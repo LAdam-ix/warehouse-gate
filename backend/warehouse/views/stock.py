@@ -29,6 +29,23 @@ class LocationViewSet(FirmScopedMixin, viewsets.ModelViewSet):
         location.save()
         return Response(LocationSerializer(location).data)
 
+    @action(detail=True, methods=["post"], url_path="move-(?P<direction>up|down)")
+    def move(self, request, pk=None, direction=None):
+        """Swap sort_order with the adjacent location."""
+        loc = self.get_object()
+        firm_locs = list(Location.objects.filter(firm=loc.firm).order_by("sort_order", "created_at"))
+        idx = next((i for i, l in enumerate(firm_locs) if l.pk == loc.pk), None)
+        if idx is None:
+            return Response(status=404)
+        swap_idx = idx - 1 if direction == "up" else idx + 1
+        if swap_idx < 0 or swap_idx >= len(firm_locs):
+            return Response({"detail": "Already at edge."}, status=400)
+        other = firm_locs[swap_idx]
+        loc.sort_order, other.sort_order = other.sort_order, loc.sort_order
+        loc.save(update_fields=["sort_order"])
+        other.save(update_fields=["sort_order"])
+        return Response(LocationSerializer(Location.objects.filter(firm=loc.firm).order_by("sort_order", "created_at"), many=True).data)
+
 
 class StockEntryViewSet(FirmScopedMixin, viewsets.ReadOnlyModelViewSet):
     """Read-only — stock entries are modified via stock action endpoints."""

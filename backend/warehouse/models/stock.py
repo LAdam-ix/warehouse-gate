@@ -15,11 +15,18 @@ class Location(AuditModel):
     description = models.TextField(blank=True)
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    sort_order = models.IntegerField(default=0)
 
     def __str__(self):
         return self.name
 
     def save(self, *args, **kwargs):
+        # Auto-assign sort_order for new locations (append to end)
+        if self._state.adding and self.sort_order == 0:
+            max_order = Location.objects.filter(firm=self.firm).aggregate(
+                m=models.Max("sort_order")
+            )["m"]
+            self.sort_order = (max_order or 0) + 1
         # Ensure only one default per firm
         if self.is_default:
             Location.objects.filter(firm=self.firm, is_default=True).exclude(pk=self.pk).update(
@@ -29,7 +36,7 @@ class Location(AuditModel):
 
     class Meta:
         unique_together = ("firm", "name")
-        ordering = ["-is_default", "name"]
+        ordering = ["sort_order", "created_at"]
 
 
 class StockEntry(models.Model):

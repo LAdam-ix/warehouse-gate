@@ -87,6 +87,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
         max_digits=10, decimal_places=2, read_only=True
     )
     total_stock = serializers.IntegerField(read_only=True)
+    stock_by_location = serializers.SerializerMethodField()
     is_low_stock = serializers.BooleanField(read_only=True)
     attribute_values = serializers.SerializerMethodField()
     attribute_value_ids = serializers.PrimaryKeyRelatedField(
@@ -96,6 +97,11 @@ class ProductVariantSerializer(serializers.ModelSerializer):
         source="attribute_values",
         required=False,
     )
+
+    def get_stock_by_location(self, obj):
+        """Returns {location_id: quantity} for entries with stock > 0."""
+        entries = obj.stock_entries.filter(quantity__gt=0).select_related("location")
+        return {str(e.location_id): e.quantity for e in entries}
 
     def get_attribute_values(self, obj):
         # Order by parent attribute's sort_order first, then value's own sort_order.
@@ -144,6 +150,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
             "effective_price",
             "effective_cost",
             "total_stock",
+            "stock_by_location",
             "is_low_stock",
             "created_at",
             "updated_at",

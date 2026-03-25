@@ -167,6 +167,7 @@ export interface ProductVariant {
   effectivePrice: string;
   effectiveCost: string;
   totalStock: number;
+  stockByLocation?: Record<string, number>;
   isLowStock: boolean;
   createdAt: string;
   updatedAt: string;
@@ -174,7 +175,7 @@ export interface ProductVariant {
 
 export type ProductVariantCreate = Omit<
   ProductVariant,
-  ReadonlyFields | "effectivePrice" | "effectiveCost" | "totalStock" | "isLowStock" | "isDefault" | "attributeValues" | "galleryPhotoUrl"
+  ReadonlyFields | "effectivePrice" | "effectiveCost" | "totalStock" | "stockByLocation" | "isLowStock" | "isDefault" | "attributeValues" | "galleryPhotoUrl"
 > & {
   attributeValueIds?: string[];
 };
@@ -189,11 +190,12 @@ export interface Location {
   description: string;
   isDefault: boolean;
   isActive: boolean;
+  sortOrder: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export type LocationCreate = Omit<Location, ReadonlyFields>;
+export type LocationCreate = Omit<Location, ReadonlyFields | "sortOrder">;
 export type LocationUpdate = Partial<LocationCreate>;
 
 // ─── Stock ────────────────────────────────────────────────────────────────────

@@ -85,13 +85,13 @@ export default function TransferStockPage() {
     }
   }, [locations, toLocationId]);
 
-  const handleAdd: ProductPickerSelectFn = (variant: ProductVariant, label: string) => {
+  const handleAdd: ProductPickerSelectFn = (variant: ProductVariant, label: string, _product, qty = 1) => {
     setCart((prev) => {
       const existing = prev.find((l) => l.variantId === variant.id);
       if (existing) {
-        return prev.map((l) => l.variantId === variant.id ? { ...l, quantity: l.quantity + 1 } : l);
+        return prev.map((l) => l.variantId === variant.id ? { ...l, quantity: l.quantity + qty } : l);
       }
-      return [...prev, { id: crypto.randomUUID(), variantId: variant.id, label, fromLocationId: "", quantity: 1 }];
+      return [...prev, { id: crypto.randomUUID(), variantId: variant.id, label, fromLocationId: "", quantity: qty }];
     });
   };
 
@@ -152,6 +152,7 @@ export default function TransferStockPage() {
             onSelect={handleAdd}
             queryParams={{ item_type: "physical", is_active: true, has_stock: true }}
             showStock
+            quickAmounts={[1, 5]}
             autoFocus
             emptyMessage={t("stock.transferPage.noProducts")}
             noMatchMessage={t("common.noProductsFound")}

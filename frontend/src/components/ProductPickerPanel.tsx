@@ -1,13 +1,13 @@
 import { useState } from "react";
 import {
-  Box, Chip, CircularProgress, Collapse, Divider, IconButton,
+  Box, Button, Chip, CircularProgress, Collapse, Divider, IconButton,
   InputAdornment, Paper, Stack, TextField, Typography,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import InventoryIcon from "@mui/icons-material/Inventory2";
 import SearchIcon from "@mui/icons-material/Search";
-import { useProducts, useProduct, useCategories } from "../api/hooks";
+import { useProducts, useProduct, useCategories, useLocations } from "../api/hooks";
 import { variantLabel } from "../utils/variantLabel";
 import type { Product, ProductVariant } from "../types/api";
 import { useTranslation } from "react-i18next";
@@ -16,21 +16,50 @@ export type ProductPickerSelectFn = (
   variant: ProductVariant,
   label: string,
   product: { itemType: string; servicePricing: string | null; hourlyRate: string | null },
+  quantity?: number,
 ) => void;
 
 // ─── Expanded variant list (inside a multi-variant product row) ───────────────
+
+function StockChips({ variant, locations }: { variant: ProductVariant; locations: { id: string; name: string }[] }) {
+  const locsWithStock = locations.filter((loc) => (variant.stockByLocation?.[loc.id] ?? 0) > 0);
+  if (locsWithStock.length === 0 || locsWithStock.length > 5) {
+    return (
+      <Chip label={`${variant.totalStock}`} size="small"
+        color={variant.totalStock === 0 ? "error" : "default"} variant="outlined" />
+    );
+  }
+  if (locsWithStock.length === 1) {
+    return (
+      <Chip label={`${locsWithStock[0].name}: ${variant.stockByLocation![locsWithStock[0].id]}`}
+        size="small" color={variant.totalStock === 0 ? "error" : "default"} variant="outlined" />
+    );
+  }
+  return (
+    <Stack direction="row" spacing={0.25} flexWrap="wrap">
+      {locsWithStock.map((loc) => (
+        <Chip key={loc.id} label={`${loc.name}: ${variant.stockByLocation![loc.id]}`}
+          size="small" variant="outlined" sx={{ fontSize: "0.65rem", height: 20 }} />
+      ))}
+    </Stack>
+  );
+}
 
 function VariantRows({
   productId,
   productName,
   product,
   showStock,
+  quickAmounts,
+  locations,
   onSelect,
 }: {
   productId: string;
   productName: string;
   product: { itemType: string; servicePricing: string | null; hourlyRate: string | null };
   showStock: boolean;
+  quickAmounts?: number[];
+  locations: { id: string; name: string }[];
   onSelect: ProductPickerSelectFn;
 }) {
   const { t } = useTranslation();
@@ -65,8 +94,8 @@ function VariantRows({
             direction="row"
             alignItems="center"
             spacing={1}
-            sx={{ py: 0.75, px: 2, cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}
-            onClick={() => onSelect(v, label, product)}
+            sx={{ py: 0.75, px: 2, ...(!quickAmounts ? { cursor: "pointer", "&:hover": { bgcolor: "action.hover" } } : {}) }}
+            onClick={!quickAmounts ? () => onSelect(v, label, product) : undefined}
           >
             {photoUrl && (
               <Box component="img" src={photoUrl}
@@ -79,14 +108,18 @@ function VariantRows({
               {v.isDefault ? t("variants.default") : variantLabel(v.attributeValues)}
             </Typography>
             {showStock && (
-              <Chip
-                label={t("writeoffs.newPage.inStock", { count: v.totalStock })}
-                size="small"
-                color="default"
-                variant="outlined"
-              />
+              <StockChips variant={v} locations={locations} />
             )}
-            <Typography variant="caption" color="primary">{t("common.add")}</Typography>
+            {quickAmounts ? (
+              <Stack direction="row" spacing={0.5}>
+                {quickAmounts.map((n) => (
+                  <Button key={n} size="small" variant="outlined" sx={{ minWidth: 36, px: 0.5 }}
+                    onClick={() => onSelect(v, label, product, n)}>+{n}</Button>
+                ))}
+              </Stack>
+            ) : (
+              <Typography variant="caption" color="primary">{t("common.add")}</Typography>
+            )}
           </Stack>
         );
       })}
@@ -99,10 +132,14 @@ function VariantRows({
 function ProductRow({
   product,
   showStock,
+  quickAmounts,
+  locations,
   onSelect,
 }: {
   product: Product;
   showStock: boolean;
+  quickAmounts?: number[];
+  locations: { id: string; name: string }[];
   onSelect: ProductPickerSelectFn;
 }) {
   const { t } = useTranslation();
@@ -115,9 +152,9 @@ function ProductRow({
     hourlyRate: product.hourlyRate,
   };
 
-  const handleSingleClick = () => {
+  const handleSingleClick = (qty?: number) => {
     const v = detail?.variants.find((v) => v.isActive && (!showStock || v.totalStock > 0));
-    if (v) onSelect(v, product.name, productMeta);
+    if (v) onSelect(v, product.name, productMeta, qty);
   };
 
   return (
@@ -126,8 +163,8 @@ function ProductRow({
         direction="row"
         alignItems="center"
         spacing={1.5}
-        sx={{ p: 1.5, cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}
-        onClick={isSingle ? handleSingleClick : () => setOpen((v) => !v)}
+        sx={{ p: 1.5, ...(!(isSingle && quickAmounts) ? { cursor: "pointer", "&:hover": { bgcolor: "action.hover" } } : {}) }}
+        onClick={isSingle && !quickAmounts ? () => handleSingleClick() : !isSingle ? () => setOpen((v) => !v) : undefined}
       >
         {product.primaryPhoto ? (
           <Box component="img" src={product.primaryPhoto}
@@ -147,13 +184,13 @@ function ProductRow({
             </Stack>
           )}
         </Box>
-        {showStock && (
-          <Chip
-            label={t("writeoffs.newPage.inStock", { count: product.totalStock })}
-            size="small"
-            variant="outlined"
-          />
-        )}
+        {showStock && (() => {
+          const singleV = isSingle ? detail?.variants.find((v) => v.isActive) : null;
+          if (singleV?.stockByLocation) {
+            return <StockChips variant={singleV} locations={locations} />;
+          }
+          return <Chip label={`${product.totalStock}`} size="small" variant="outlined" />;
+        })()}
         {!isSingle && (
           <>
             <Chip label={t("production.variants", { count: product.variantCount })} size="small" variant="outlined" />
@@ -162,9 +199,16 @@ function ProductRow({
             </IconButton>
           </>
         )}
-        {isSingle && (
+        {isSingle && quickAmounts ? (
+          <Stack direction="row" spacing={0.5}>
+            {quickAmounts.map((n) => (
+              <Button key={n} size="small" variant="outlined" sx={{ minWidth: 36, px: 0.5 }}
+                onClick={(e) => { e.stopPropagation(); handleSingleClick(n); }}>+{n}</Button>
+            ))}
+          </Stack>
+        ) : isSingle ? (
           <Typography variant="caption" color="primary">{t("common.add")} →</Typography>
-        )}
+        ) : null}
       </Stack>
       {!isSingle && (
         <Collapse in={open}>
@@ -174,6 +218,8 @@ function ProductRow({
             productName={product.name}
             product={productMeta}
             showStock={showStock}
+            quickAmounts={quickAmounts}
+            locations={locations}
             onSelect={onSelect}
           />
         </Collapse>
@@ -190,6 +236,8 @@ interface ProductPickerPanelProps {
   queryParams?: Record<string, unknown>;
   /** Show stock count chips and hide zero-stock variants */
   showStock?: boolean;
+  /** Show quick-add buttons (e.g. [1, 5, 10]) instead of click-to-add */
+  quickAmounts?: number[];
   /** Additional client-side filter applied after category filtering */
   filterFn?: (product: Product) => boolean;
   autoFocus?: boolean;
@@ -203,6 +251,7 @@ export default function ProductPickerPanel({
   onSelect,
   queryParams = {},
   showStock = false,
+  quickAmounts,
   filterFn,
   autoFocus = false,
   emptyMessage,
@@ -219,6 +268,8 @@ export default function ProductPickerPanel({
     ...queryParams,
   });
   const { data: categories } = useCategories();
+  const { data: allLocations } = useLocations();
+  const locations = (allLocations ?? []).filter((l) => l.isActive).map((l) => ({ id: l.id, name: l.name }));
 
   const allProducts = productsData?.results ?? [];
   const products = allProducts.filter((p) => {
@@ -286,7 +337,7 @@ export default function ProductPickerPanel({
 
       <Stack spacing={0.75}>
         {products.map((p) => (
-          <ProductRow key={p.id} product={p} showStock={showStock} onSelect={onSelect} />
+          <ProductRow key={p.id} product={p} showStock={showStock} quickAmounts={quickAmounts} locations={locations} onSelect={onSelect} />
         ))}
       </Stack>
     </Stack>
