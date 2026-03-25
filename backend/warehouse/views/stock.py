@@ -29,9 +29,15 @@ class LocationViewSet(FirmScopedMixin, viewsets.ModelViewSet):
         location.save()
         return Response(LocationSerializer(location).data)
 
-    @action(detail=True, methods=["post"], url_path="move-(?P<direction>up|down)")
-    def move(self, request, pk=None, direction=None):
-        """Swap sort_order with the adjacent location."""
+    @action(detail=True, methods=["post"], url_path="move-up")
+    def move_up(self, request, pk=None):
+        return self._move_location(request, "up")
+
+    @action(detail=True, methods=["post"], url_path="move-down")
+    def move_down(self, request, pk=None):
+        return self._move_location(request, "down")
+
+    def _move_location(self, request, direction):
         loc = self.get_object()
         firm_locs = list(Location.objects.filter(firm=loc.firm).order_by("sort_order", "created_at"))
         idx = next((i for i, l in enumerate(firm_locs) if l.pk == loc.pk), None)
