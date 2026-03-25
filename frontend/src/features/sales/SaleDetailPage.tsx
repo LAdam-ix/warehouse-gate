@@ -264,22 +264,23 @@ function SaleDiscountFields({ sale, onSave }: { sale: { discountPercentage: stri
       <TextField
         size="small" type="number"
         label={t("sales.discountPercent")}
+        placeholder="0"
         value={pct}
         onChange={(e) => setPct(e.target.value)}
         onBlur={savePct}
         onKeyDown={(e) => { if (e.key === "Enter") savePct(); }}
-        slotProps={{ htmlInput: { step: "0.01", min: 0, max: 100 } }}
-        InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
+        slotProps={{ htmlInput: { step: "0.01", min: 0, max: 100 }, inputLabel: { shrink: true } }}
         sx={{ width: 110 }}
       />
       <TextField
         size="small" type="number"
         label={t("sales.discountFixedLabel")}
+        placeholder="0"
         value={fixed}
         onChange={(e) => setFixed(e.target.value)}
         onBlur={saveFixed}
         onKeyDown={(e) => { if (e.key === "Enter") saveFixed(); }}
-        slotProps={{ htmlInput: { step: "0.01", min: 0 } }}
+        slotProps={{ htmlInput: { step: "0.01", min: 0 }, inputLabel: { shrink: true } }}
         InputProps={{ startAdornment: <InputAdornment position="start">€</InputAdornment> }}
         sx={{ width: 120 }}
       />
