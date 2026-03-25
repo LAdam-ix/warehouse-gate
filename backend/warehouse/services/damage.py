@@ -18,8 +18,10 @@ def report_damage(
     location: Location,
     quantity: int,
     reason: str,
+    note: str = "",
     estimated_value_lost=None,
     report_date=None,
+    batch_id=None,
     user=None,
 ) -> DamageReport:
     """
@@ -44,6 +46,7 @@ def report_damage(
         location=location,
         quantity=quantity,
         reason=reason,
+        note=note,
         estimated_value_lost=estimated_value_lost,
         report_date=report_date or timezone.now(),
         created_by=user,
@@ -63,6 +66,7 @@ def report_damage(
             movement_date=report_date or timezone.now(),
             created_by=user,
             damage_report=report,
+            batch_id=batch_id,
         )
 
     return report

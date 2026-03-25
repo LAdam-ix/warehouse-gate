@@ -207,6 +207,7 @@ export default function WriteOffNewPage() {
       toast.error(t("writeoffs.newPage.fillRequired"));
       return;
     }
+    const batchId = crypto.randomUUID();
     await Promise.all(
       cart.map((line) => {
         const finalReason = line.reason === otherLabel ? line.customReason : line.reason;
@@ -217,6 +218,7 @@ export default function WriteOffNewPage() {
           reason: finalReason,
           note: line.note || undefined,
           reportDate: new Date(reportDate).toISOString(),
+          batchId,
         });
       })
     );

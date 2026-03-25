@@ -349,8 +349,8 @@ export interface DamageReport {
 
 export type DamageReportCreate = Omit<
   DamageReport,
-  ReadonlyFields | "variantName" | "locationName" | "createdByName" | "estimatedValueLost" | "note"
-> & { estimatedValueLost?: string; note?: string };
+  ReadonlyFields | "variantName" | "locationName" | "createdByName" | "estimatedValueLost" | "note" | "batchId"
+> & { estimatedValueLost?: string; note?: string; batchId?: string };
 
 // ─── Production Request ───────────────────────────────────────────────────────
 

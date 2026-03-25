@@ -25,8 +25,10 @@ class DamageReportViewSet(FirmScopedMixin, viewsets.ModelViewSet):
             location=data["location"],
             quantity=data["quantity"],
             reason=data["reason"],
+            note=data.get("note", ""),
             estimated_value_lost=data.get("estimated_value_lost"),
             report_date=data.get("report_date"),
+            batch_id=data.get("batch_id"),
             user=self.get_user(),
         )
         # Attach instance so serializer can return it

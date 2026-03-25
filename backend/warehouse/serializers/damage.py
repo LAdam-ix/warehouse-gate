@@ -7,6 +7,8 @@ class DamageReportSerializer(serializers.ModelSerializer):
     variant_name = serializers.SerializerMethodField()
     location_name = serializers.CharField(source="location.name", read_only=True)
     created_by_name = serializers.CharField(source="created_by.name", read_only=True)
+    # batch_id is stored on StockMovement, not DamageReport — write-only, used in perform_create
+    batch_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = DamageReport
@@ -25,6 +27,7 @@ class DamageReportSerializer(serializers.ModelSerializer):
             "updated_at",
             "created_by",
             "created_by_name",
+            "batch_id",
         ]
         read_only_fields = [
             "id", "created_at", "updated_at", "created_by",
