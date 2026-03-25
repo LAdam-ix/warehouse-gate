@@ -16,9 +16,9 @@ import { toast } from "react-toastify";
 import {
   useSale, useUpdateSale, useFinalizeSale, useVoidSale, useDeleteSale,
   useAddSaleLine, useUpdateSaleLine, useDeleteSaleLine,
-  useLocations, useStockEntries, useWarehouseSettings,
+  useLocations, useStockEntries, useFirm,
 } from "../../api/hooks";
-import type { Location, ProductVariant, SaleLine, SaleWrite, StockEntry } from "../../types/api";
+import type { Location, SaleLine, SaleWrite, StockEntry } from "../../types/api";
 import ProductPickerPanel, { type ProductPickerSelectFn } from "../../components/ProductPickerPanel";
 import { useTranslation } from "react-i18next";
 
@@ -261,7 +261,7 @@ export default function SaleDetailPage() {
 
   const { data: sale, isLoading } = useSale(saleId!);
   const { data: locations = [] } = useLocations();
-  const { data: settings } = useWarehouseSettings();
+  const { data: firm } = useFirm();
 
   const updateSale = useUpdateSale(saleId!);
   const finalize = useFinalizeSale(saleId!);
@@ -399,7 +399,7 @@ export default function SaleDetailPage() {
           <Grid size={{ xs: 12, sm: 5 }}>
             <ProductPickerPanel
               onSelect={handleAddLine}
-              filterFn={settings?.warehouseMode === "strict"
+              filterFn={firm?.warehouseMode === "strict"
                 ? (p) => p.itemType === "service" || p.totalStock > 0
                 : undefined}
             />

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Box, Button, Chip, CircularProgress, Collapse, Divider,
+  Button, Chip, Collapse, Divider,
   FormControl, Grid, IconButton, InputLabel,
   MenuItem, Paper, Select, Stack, TextField, Typography,
 } from "@mui/material";
@@ -12,7 +12,6 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import { toast } from "react-toastify";
 import { useLocations, useCreateDamageReport, useStockEntries } from "../../api/hooks";
-import type { ProductVariant } from "../../types/api";
 import ProductPickerPanel from "../../components/ProductPickerPanel";
 import { useTranslation } from "react-i18next";
 

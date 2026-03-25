@@ -101,7 +101,6 @@ function VariantRows({
   productName: string;
   onAdd: (line: CartLine) => void;
 }) {
-  const { t } = useTranslation();
   const { data: detail, isLoading } = useProduct(productId);
   if (isLoading) return <Box sx={{ p: 1.5 }}><CircularProgress size={16} /></Box>;
   if (!detail) return null;

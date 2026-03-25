@@ -349,7 +349,7 @@ export interface DamageReport {
 
 export type DamageReportCreate = Omit<
   DamageReport,
-  ReadonlyFields | "variantName" | "locationName" | "createdByName" | "estimatedValueLost"
+  ReadonlyFields | "variantName" | "locationName" | "createdByName" | "estimatedValueLost" | "note"
 > & { estimatedValueLost?: string; note?: string };
 
 // ─── Production Request ───────────────────────────────────────────────────────
