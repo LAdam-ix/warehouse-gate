@@ -242,6 +242,7 @@ export default function WriteOffNewPage() {
             onSelect={handleAdd}
             queryParams={{ item_type: "physical", has_stock: true }}
             showStock
+            hideZeroStock
             quickAmounts={[1, 5]}
             autoFocus
             emptyMessage={t("writeoffs.newPage.noPhysicalItems")}

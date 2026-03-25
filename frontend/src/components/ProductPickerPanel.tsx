@@ -54,6 +54,7 @@ function VariantRows({
   productName,
   product,
   showStock,
+  hideZeroStock,
   quickAmounts,
   locations,
   variantLimit,
@@ -64,6 +65,7 @@ function VariantRows({
   productName: string;
   product: { itemType: string; servicePricing: string | null; hourlyRate: string | null };
   showStock: boolean;
+  hideZeroStock: boolean;
   quickAmounts?: number[];
   locations: { id: string; name: string }[];
   variantLimit?: number;
@@ -77,12 +79,12 @@ function VariantRows({
   if (isLoading) return <Box sx={{ p: 1.5 }}><CircularProgress size={16} /></Box>;
   if (!detail) return null;
 
-  const filtered = detail.variants.filter((v) => v.isActive && (!showStock || v.totalStock > 0));
+  const filtered = detail.variants.filter((v) => v.isActive && (!hideZeroStock || v.totalStock > 0));
   const active = variantSort === "stockAsc"
     ? [...filtered].sort((a, b) => a.totalStock - b.totalStock)
     : sortVariants(filtered);
 
-  if (active.length === 0 && showStock) {
+  if (active.length === 0 && hideZeroStock) {
     return (
       <Box sx={{ px: 2, py: 1 }}>
         <Typography variant="caption" color="text.secondary">
@@ -153,6 +155,7 @@ function VariantRows({
 function ProductRow({
   product,
   showStock,
+  hideZeroStock,
   quickAmounts,
   locations,
   autoExpandThreshold,
@@ -162,6 +165,7 @@ function ProductRow({
 }: {
   product: Product;
   showStock: boolean;
+  hideZeroStock: boolean;
   quickAmounts?: number[];
   locations: { id: string; name: string }[];
   autoExpandThreshold?: number;
@@ -182,7 +186,7 @@ function ProductRow({
   };
 
   const handleSingleClick = (qty?: number) => {
-    const v = detail?.variants.find((v) => v.isActive && (!showStock || v.totalStock > 0));
+    const v = detail?.variants.find((v) => v.isActive && (!hideZeroStock || v.totalStock > 0));
     if (v) onSelect(v, product.name, productMeta, qty);
   };
 
@@ -247,6 +251,7 @@ function ProductRow({
             productName={product.name}
             product={productMeta}
             showStock={showStock}
+            hideZeroStock={hideZeroStock}
             quickAmounts={quickAmounts}
             locations={locations}
             variantLimit={variantLimit}
@@ -265,8 +270,10 @@ interface ProductPickerPanelProps {
   onSelect: ProductPickerSelectFn;
   /** Extra params forwarded to useProducts (e.g. item_type, has_stock) */
   queryParams?: Record<string, unknown>;
-  /** Show stock count chips and hide zero-stock variants */
+  /** Show stock count chips on product/variant rows */
   showStock?: boolean;
+  /** Hide variants with zero stock from expanded variant lists */
+  hideZeroStock?: boolean;
   /** Show quick-add buttons (e.g. [1, 5, 10]) instead of click-to-add */
   quickAmounts?: number[];
   /** Auto-expand multi-variant products with ≤ this many variants */
@@ -288,6 +295,7 @@ export default function ProductPickerPanel({
   onSelect,
   queryParams = {},
   showStock = false,
+  hideZeroStock = false,
   quickAmounts,
   autoExpandThreshold,
   variantLimit,
@@ -377,7 +385,7 @@ export default function ProductPickerPanel({
 
       <Stack spacing={0.75}>
         {products.map((p) => (
-          <ProductRow key={p.id} product={p} showStock={showStock} quickAmounts={quickAmounts} locations={locations} autoExpandThreshold={autoExpandThreshold} variantLimit={variantLimit} variantSort={variantSort} onSelect={onSelect} />
+          <ProductRow key={p.id} product={p} showStock={showStock} hideZeroStock={hideZeroStock} quickAmounts={quickAmounts} locations={locations} autoExpandThreshold={autoExpandThreshold} variantLimit={variantLimit} variantSort={variantSort} onSelect={onSelect} />
         ))}
       </Stack>
     </Stack>

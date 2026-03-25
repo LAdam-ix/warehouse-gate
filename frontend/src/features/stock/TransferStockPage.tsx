@@ -152,6 +152,7 @@ export default function TransferStockPage() {
             onSelect={handleAdd}
             queryParams={{ item_type: "physical", is_active: true, has_stock: true }}
             showStock
+            hideZeroStock
             quickAmounts={[1, 5]}
             autoFocus
             emptyMessage={t("stock.transferPage.noProducts")}
