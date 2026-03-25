@@ -1,26 +1,19 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Box, Button, Chip, CircularProgress, Collapse, Divider,
-  Grid, IconButton, InputAdornment, Paper, Stack, TextField, Typography,
+  Button, Chip, Divider,
+  Grid, IconButton, Paper, Stack, TextField, Typography,
   FormControl, InputLabel, Select, MenuItem,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckIcon from "@mui/icons-material/Check";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import InventoryIcon from "@mui/icons-material/Inventory2";
-import SearchIcon from "@mui/icons-material/Search";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import { toast } from "react-toastify";
-import { useProducts, useProduct, useLocations, useAddStock, useCategories, useCreateLocation } from "../../api/hooks";
-import { variantLabel } from "../../utils/variantLabel";
-import type { Product } from "../../types/api";
+import { useLocations, useAddStock, useCreateLocation } from "../../api/hooks";
+import ProductPickerPanel, { type ProductPickerSelectFn } from "../../components/ProductPickerPanel";
 import { useTranslation } from "react-i18next";
-
-const QUICK_AMOUNTS = [1, 5, 10, 50];
 
 interface CartLine {
   id: string; // unique per line — same variant can appear multiple times for different locations
@@ -30,243 +23,6 @@ interface CartLine {
   locationId: string;
 }
 
-// ─── Quick-add buttons row for a single variant ───────────────────────────────
-
-function VariantQuickAdd({
-  variantId,
-  variantLabel,
-  totalStock,
-  isLowStock,
-  colorHex,
-  photoUrl,
-  label,
-  onAdd,
-}: {
-  variantId: string;
-  variantLabel: string;
-  totalStock: number;
-  isLowStock: boolean;
-  colorHex?: string | null;
-  photoUrl?: string | null;
-  label: string;
-  onAdd: (line: Omit<CartLine, "locationId">) => void;
-}) {
-  const { t } = useTranslation();
-  const stockColor = totalStock === 0 ? "error" : isLowStock ? "warning" : "success";
-  return (
-    <Stack direction="row" alignItems="center" spacing={1} sx={{ py: 0.75, px: 2 }}>
-      {photoUrl && (
-        <Box component="img" src={photoUrl} sx={{ width: 32, height: 32, borderRadius: "3px", objectFit: "cover" }} />
-      )}
-      {!photoUrl && colorHex && (
-        <Box sx={{ width: 14, height: 14, borderRadius: "50%", flexShrink: 0, bgcolor: colorHex }} />
-      )}
-      <Typography variant="body2" sx={{ flex: 1 }} noWrap>{label}</Typography>
-      <Chip label={t("stock.addStockPage.inStock", { count: totalStock })} size="small" color={stockColor} variant="outlined" />
-      <Stack direction="row" spacing={0.5}>
-        {QUICK_AMOUNTS.map((n) => (
-          <Button
-            key={n}
-            size="small"
-            variant="outlined"
-            sx={{ minWidth: 36, px: 0.5 }}
-            onClick={() => onAdd({ id: crypto.randomUUID(), variantId, variantLabel, quantity: n })}
-          >
-            +{n}
-          </Button>
-        ))}
-      </Stack>
-    </Stack>
-  );
-}
-
-// ─── Fetches product detail and renders variant rows ──────────────────────────
-
-function VariantRows({
-  productId,
-  productName,
-  onAdd,
-}: {
-  productId: string;
-  productName: string;
-  onAdd: (line: Omit<CartLine, "locationId">) => void;
-}) {
-  const { t } = useTranslation();
-  const { data: detail, isLoading } = useProduct(productId);
-  const [showAll, setShowAll] = useState(false);
-
-  if (isLoading) return <Box sx={{ p: 1.5 }}><CircularProgress size={16} /></Box>;
-  if (!detail) return null;
-
-  const active = detail.variants.filter((v) => v.isActive);
-  const visible = showAll || active.length <= 3 ? active : active.slice(0, 3);
-  const hidden = active.length - visible.length;
-
-  return (
-    <Stack divider={<Divider />}>
-      {visible.map((v) => {
-        const vLabel = v.isDefault
-          ? productName
-          : `${productName} — ${variantLabel(v.attributeValues)}`;
-        const rowLabel = v.isDefault ? t("variants.default") : variantLabel(v.attributeValues);
-        const photoUrl = v.galleryPhotoUrl ?? v.photo ?? null;
-        const colorHex = v.attributeValues.find((av) => av.colorHex)?.colorHex ?? null;
-
-        return (
-          <VariantQuickAdd
-            key={v.id}
-            variantId={v.id}
-            variantLabel={vLabel}
-            totalStock={v.totalStock}
-            isLowStock={v.isLowStock}
-            photoUrl={!photoUrl ? null : photoUrl}
-            colorHex={!photoUrl ? colorHex : null}
-            label={rowLabel}
-            onAdd={onAdd}
-          />
-        );
-      })}
-      {hidden > 0 && (
-        <Button
-          size="small"
-          sx={{ mx: 2, my: 0.5, alignSelf: "flex-start", textTransform: "none" }}
-          onClick={() => setShowAll(true)}
-        >
-          {t(hidden > 1 ? "stock.addStockPage.moreVariants_other" : "stock.addStockPage.moreVariants_one", { count: hidden })}
-        </Button>
-      )}
-    </Stack>
-  );
-}
-
-// ─── Inline single-variant quick-add (no expand, fetches on mount) ────────────
-
-function SingleVariantRow({
-  product,
-  onAdd,
-}: {
-  product: Product;
-  onAdd: (line: Omit<CartLine, "locationId">) => void;
-}) {
-  const { t } = useTranslation();
-  const { data: detail, isLoading } = useProduct(product.id);
-
-  const v = detail?.variants.find((v) => v.isActive);
-  const stockColor = (product.totalStock === 0) ? "error" : "default";
-
-  return (
-    <Paper variant="outlined">
-      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ p: 1.5 }}>
-        {product.primaryPhoto ? (
-          <Box component="img" src={product.primaryPhoto}
-            sx={{ width: 48, height: 48, borderRadius: "4px", objectFit: "cover", flexShrink: 0 }} />
-        ) : (
-          <Box sx={{ width: 48, height: 48, bgcolor: "grey.100", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <InventoryIcon sx={{ fontSize: 24, color: "grey.400" }} />
-          </Box>
-        )}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography fontWeight="medium" noWrap>{product.name}</Typography>
-          {product.categoryNames.length > 0 && (
-            <Stack direction="row" flexWrap="wrap" gap={0.25} sx={{ mt: 0.25 }}>
-              {product.categoryNames.map((n) => (
-                <Chip key={n} label={n} size="small" variant="outlined" sx={{ height: 16, fontSize: "0.6rem" }} />
-              ))}
-            </Stack>
-          )}
-        </Box>
-
-        {isLoading ? (
-          <CircularProgress size={16} />
-        ) : v ? (
-          <>
-            <Chip
-              label={t("stock.addStockPage.inStock", { count: v.totalStock })}
-              size="small"
-              color={v.totalStock === 0 ? "error" : v.isLowStock ? "warning" : "success"}
-              variant="outlined"
-            />
-            <Stack direction="row" spacing={0.5}>
-              {QUICK_AMOUNTS.map((n) => (
-                <Button
-                  key={n}
-                  size="small"
-                  variant="outlined"
-                  sx={{ minWidth: 36, px: 0.5 }}
-                  onClick={() => onAdd({ id: crypto.randomUUID(), variantId: v.id, variantLabel: product.name, quantity: n })}
-                >
-                  +{n}
-                </Button>
-              ))}
-            </Stack>
-          </>
-        ) : (
-          <Chip label={t("stock.addStockPage.inStock", { count: product.totalStock })} size="small" color={stockColor} variant="outlined" />
-        )}
-      </Stack>
-    </Paper>
-  );
-}
-
-// ─── Multi-variant product row with expand ────────────────────────────────────
-
-function MultiVariantRow({
-  product,
-  onAdd,
-}: {
-  product: Product;
-  onAdd: (line: Omit<CartLine, "locationId">) => void;
-}) {
-  const { t } = useTranslation();
-  // Auto-expand if ≤3 variants
-  const [open, setOpen] = useState(product.variantCount <= 3);
-
-  return (
-    <Paper variant="outlined">
-      <Stack
-        direction="row"
-        alignItems="center"
-        spacing={1.5}
-        sx={{ p: 1.5, cursor: "pointer" }}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {product.primaryPhoto ? (
-          <Box component="img" src={product.primaryPhoto}
-            sx={{ width: 48, height: 48, borderRadius: "4px", objectFit: "cover", flexShrink: 0 }} />
-        ) : (
-          <Box sx={{ width: 48, height: 48, bgcolor: "grey.100", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <InventoryIcon sx={{ fontSize: 24, color: "grey.400" }} />
-          </Box>
-        )}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography fontWeight="medium" noWrap>{product.name}</Typography>
-          {product.categoryNames.length > 0 && (
-            <Stack direction="row" flexWrap="wrap" gap={0.25} sx={{ mt: 0.25 }}>
-              {product.categoryNames.map((n) => (
-                <Chip key={n} label={n} size="small" variant="outlined" sx={{ height: 16, fontSize: "0.6rem" }} />
-              ))}
-            </Stack>
-          )}
-        </Box>
-        <Chip
-          label={t("stock.addStockPage.inStock", { count: product.totalStock })}
-          size="small"
-          color={product.totalStock === 0 ? "error" : "default"}
-          variant="outlined"
-        />
-        <Chip label={t("stock.addStockPage.variants", { count: product.variantCount })} size="small" variant="outlined" />
-        <IconButton size="small" onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}>
-          {open ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-        </IconButton>
-      </Stack>
-
-      <Collapse in={open}>
-        <Divider />
-        <VariantRows productId={product.id} productName={product.name} onAdd={onAdd} />
-      </Collapse>
-    </Paper>
-  );
-}
 
 // ─── Inline "add location" widget ────────────────────────────────────────────
 
@@ -315,20 +71,11 @@ function AddLocationButton({ onCreated }: { onCreated: (id: string) => void }) {
 export default function AddStockPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [catMode, setCatMode] = useState<"or" | "and">("or");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [defaultLocationId, setDefaultLocationId] = useState("");
   const [note, setNote] = useState("");
   const [movementDate, setMovementDate] = useState(new Date().toISOString().slice(0, 16));
 
-  const { data: productsData, isLoading } = useProducts({
-    search: search || undefined,
-    item_type: "physical",
-    is_active: true,
-  });
-  const { data: categories } = useCategories();
   const { data: locations } = useLocations();
   const addStock = useAddStock();
 
@@ -340,17 +87,10 @@ export default function AddStockPage() {
     }
   }, [locations, defaultLocationId]);
 
-  const toggleCategory = (id: string) =>
-    setSelectedCategories((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
-    );
-
-  const allProducts = productsData?.results ?? [];
-  const products = allProducts.filter((p) => {
-    if (selectedCategories.length === 0) return true;
-    if (catMode === "or") return selectedCategories.some((id) => p.categories.includes(id));
-    return selectedCategories.every((id) => p.categories.includes(id));
-  });
+  const handlePickerAdd: ProductPickerSelectFn = (_variant, label, _product, qty = 1) => {
+    const line = { variantId: _variant.id, variantLabel: label, quantity: qty };
+    handleAdd(line);
+  };
 
   const handleAdd = (line: Omit<CartLine, "id" | "locationId">) => {
     setCart((prev) => {
@@ -409,64 +149,18 @@ export default function AddStockPage() {
       </Stack>
 
       <Grid container spacing={2}>
-        {/* Left — product search */}
+        {/* Left — product picker */}
         <Grid size={{ xs: 12, md: 7 }}>
-          <Stack spacing={1.5}>
-            <TextField
-              placeholder={t("catalog.searchProducts")}
-              size="small"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
-              fullWidth
-              autoFocus
-            />
-
-            {/* Category tag filter */}
-            {categories && categories.length > 0 && (
-              <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center">
-                <Typography variant="caption" color="text.secondary">{t("common.tags")}</Typography>
-                {categories.map((c) => (
-                  <Chip
-                    key={c.id}
-                    label={c.name}
-                    size="small"
-                    onClick={() => toggleCategory(c.id)}
-                    color={selectedCategories.includes(c.id) ? "primary" : "default"}
-                    variant={selectedCategories.includes(c.id) ? "filled" : "outlined"}
-                  />
-                ))}
-                {selectedCategories.length > 1 && (
-                  <Chip
-                    label={catMode === "or" ? "OR" : "AND"}
-                    size="small"
-                    color="secondary"
-                    variant="outlined"
-                    onClick={() => setCatMode((m) => m === "or" ? "and" : "or")}
-                    title="Click to toggle OR / AND logic"
-                  />
-                )}
-                {selectedCategories.length > 0 && (
-                  <Chip label="×" size="small" onClick={() => setSelectedCategories([])} />
-                )}
-              </Stack>
-            )}
-
-            {isLoading && <Box sx={{ textAlign: "center", py: 4 }}><CircularProgress /></Box>}
-            {!isLoading && products.length === 0 && (
-              <Typography color="text.secondary" variant="body2">{t("common.noProductsFound")}</Typography>
-            )}
-
-            <Stack spacing={0.75}>
-              {products.map((product) =>
-                product.variantCount === 1 ? (
-                  <SingleVariantRow key={product.id} product={product} onAdd={handleAdd} />
-                ) : (
-                  <MultiVariantRow key={product.id} product={product} onAdd={handleAdd} />
-                )
-              )}
-            </Stack>
-          </Stack>
+          <ProductPickerPanel
+            onSelect={handlePickerAdd}
+            queryParams={{ item_type: "physical" }}
+            showStock
+            quickAmounts={[1, 5, 10, 50]}
+            autoExpandThreshold={3}
+            variantLimit={3}
+            autoFocus
+            noMatchMessage={t("common.noProductsFound")}
+          />
         </Grid>
 
         {/* Right — cart */}

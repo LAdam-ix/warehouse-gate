@@ -21,25 +21,29 @@ export type ProductPickerSelectFn = (
 
 // ─── Expanded variant list (inside a multi-variant product row) ───────────────
 
-function StockChips({ variant, locations }: { variant: ProductVariant; locations: { id: string; name: string }[] }) {
+export function StockChips({ variant, locations, chipColor }: {
+  variant: { totalStock: number; stockByLocation?: Record<string, number>; isLowStock?: boolean };
+  locations: { id: string; name: string }[];
+  chipColor?: "default" | "error" | "warning" | "success";
+}) {
+  const color = chipColor ?? (variant.totalStock === 0 ? "error" : "default");
   const locsWithStock = locations.filter((loc) => (variant.stockByLocation?.[loc.id] ?? 0) > 0);
   if (locsWithStock.length === 0 || locsWithStock.length > 5) {
     return (
-      <Chip label={`${variant.totalStock}`} size="small"
-        color={variant.totalStock === 0 ? "error" : "default"} variant="outlined" />
+      <Chip label={`${variant.totalStock}`} size="small" color={color} variant="outlined" />
     );
   }
   if (locsWithStock.length === 1) {
     return (
       <Chip label={`${locsWithStock[0].name}: ${variant.stockByLocation![locsWithStock[0].id]}`}
-        size="small" color={variant.totalStock === 0 ? "error" : "default"} variant="outlined" />
+        size="small" color={color} variant="outlined" />
     );
   }
   return (
     <Stack direction="row" spacing={0.25} flexWrap="wrap">
       {locsWithStock.map((loc) => (
         <Chip key={loc.id} label={`${loc.name}: ${variant.stockByLocation![loc.id]}`}
-          size="small" variant="outlined" sx={{ fontSize: "0.65rem", height: 20 }} />
+          size="small" color={color} variant="outlined" sx={{ fontSize: "0.65rem", height: 20 }} />
       ))}
     </Stack>
   );
@@ -52,6 +56,8 @@ function VariantRows({
   showStock,
   quickAmounts,
   locations,
+  variantLimit,
+  variantSort,
   onSelect,
 }: {
   productId: string;
@@ -60,15 +66,19 @@ function VariantRows({
   showStock: boolean;
   quickAmounts?: number[];
   locations: { id: string; name: string }[];
+  variantLimit?: number;
+  variantSort?: "stockAsc";
   onSelect: ProductPickerSelectFn;
 }) {
   const { t } = useTranslation();
   const { data: detail, isLoading } = useProduct(productId);
+  const [showAll, setShowAll] = useState(false);
 
   if (isLoading) return <Box sx={{ p: 1.5 }}><CircularProgress size={16} /></Box>;
   if (!detail) return null;
 
-  const active = detail.variants.filter((v) => v.isActive && (!showStock || v.totalStock > 0));
+  let active = detail.variants.filter((v) => v.isActive && (!showStock || v.totalStock > 0));
+  if (variantSort === "stockAsc") active = [...active].sort((a, b) => a.totalStock - b.totalStock);
 
   if (active.length === 0 && showStock) {
     return (
@@ -80,9 +90,12 @@ function VariantRows({
     );
   }
 
+  const visible = variantLimit && !showAll && active.length > variantLimit ? active.slice(0, variantLimit) : active;
+  const hidden = active.length - visible.length;
+
   return (
     <Stack divider={<Divider />}>
-      {active.map((v) => {
+      {visible.map((v) => {
         const label = v.isDefault
           ? productName
           : `${productName} — ${variantLabel(v.attributeValues)}`;
@@ -123,6 +136,12 @@ function VariantRows({
           </Stack>
         );
       })}
+      {hidden > 0 && (
+        <Button size="small" sx={{ mx: 2, my: 0.5, alignSelf: "flex-start", textTransform: "none" }}
+          onClick={() => setShowAll(true)}>
+          +{hidden} more
+        </Button>
+      )}
     </Stack>
   );
 }
@@ -134,16 +153,24 @@ function ProductRow({
   showStock,
   quickAmounts,
   locations,
+  autoExpandThreshold,
+  variantLimit,
+  variantSort,
   onSelect,
 }: {
   product: Product;
   showStock: boolean;
   quickAmounts?: number[];
   locations: { id: string; name: string }[];
+  autoExpandThreshold?: number;
+  variantLimit?: number;
+  variantSort?: "stockAsc";
   onSelect: ProductPickerSelectFn;
 }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(
+    !!(autoExpandThreshold && product.variantCount > 1 && product.variantCount <= autoExpandThreshold)
+  );
   const { data: detail } = useProduct(product.id);
   const isSingle = product.variantCount <= 1;
   const productMeta = {
@@ -220,6 +247,8 @@ function ProductRow({
             showStock={showStock}
             quickAmounts={quickAmounts}
             locations={locations}
+            variantLimit={variantLimit}
+            variantSort={variantSort}
             onSelect={onSelect}
           />
         </Collapse>
@@ -238,6 +267,12 @@ interface ProductPickerPanelProps {
   showStock?: boolean;
   /** Show quick-add buttons (e.g. [1, 5, 10]) instead of click-to-add */
   quickAmounts?: number[];
+  /** Auto-expand multi-variant products with ≤ this many variants */
+  autoExpandThreshold?: number;
+  /** Show "more" button after this many variants in expanded list */
+  variantLimit?: number;
+  /** Sort variants inside expanded rows */
+  variantSort?: "stockAsc";
   /** Additional client-side filter applied after category filtering */
   filterFn?: (product: Product) => boolean;
   autoFocus?: boolean;
@@ -252,6 +287,9 @@ export default function ProductPickerPanel({
   queryParams = {},
   showStock = false,
   quickAmounts,
+  autoExpandThreshold,
+  variantLimit,
+  variantSort,
   filterFn,
   autoFocus = false,
   emptyMessage,
@@ -337,7 +375,7 @@ export default function ProductPickerPanel({
 
       <Stack spacing={0.75}>
         {products.map((p) => (
-          <ProductRow key={p.id} product={p} showStock={showStock} quickAmounts={quickAmounts} locations={locations} onSelect={onSelect} />
+          <ProductRow key={p.id} product={p} showStock={showStock} quickAmounts={quickAmounts} locations={locations} autoExpandThreshold={autoExpandThreshold} variantLimit={variantLimit} variantSort={variantSort} onSelect={onSelect} />
         ))}
       </Stack>
     </Stack>
