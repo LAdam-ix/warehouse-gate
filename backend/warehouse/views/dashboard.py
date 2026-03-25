@@ -34,10 +34,12 @@ class DashboardView(APIView):
 
         total_stock_units = 0
         stock_value = 0
+        stock_retail_value = 0
         low_stock_variants = 0
         for entry in stock_entries:
             total_stock_units += entry.quantity
             stock_value += entry.quantity * float(entry.variant.effective_cost)
+            stock_retail_value += entry.quantity * float(entry.variant.effective_price)
             if entry.variant.is_low_stock:
                 low_stock_variants += 1
 
@@ -78,6 +80,7 @@ class DashboardView(APIView):
                 "total_variants": total_variants,
                 "total_stock_units": total_stock_units,
                 "stock_value": round(stock_value, 2),
+                "stock_potential_profit": round(stock_retail_value - stock_value, 2),
                 "low_stock_variants": low_stock_variants,
             },
             "sales_period": {

@@ -28,6 +28,7 @@ class DamageReport(AuditModel):
     )
     quantity = models.PositiveIntegerField()
     reason = models.TextField()
+    note = models.TextField(blank=True)
     estimated_value_lost = models.DecimalField(
         max_digits=10,
         decimal_places=2,

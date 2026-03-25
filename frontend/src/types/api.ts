@@ -127,6 +127,8 @@ export interface AttributeValue {
   value: string;
   colorHex: string | null;
   sortOrder: number;
+  priceDelta: string;
+  costDelta: string;
 }
 
 export type AttributeValueCreate = Omit<AttributeValue, "id"> & { attribute: string };
@@ -336,6 +338,7 @@ export interface DamageReport {
   locationName: string;
   quantity: number;
   reason: string;
+  note: string;
   estimatedValueLost: string;
   reportDate: string;
   createdAt: string;
@@ -347,7 +350,7 @@ export interface DamageReport {
 export type DamageReportCreate = Omit<
   DamageReport,
   ReadonlyFields | "variantName" | "locationName" | "createdByName" | "estimatedValueLost"
-> & { estimatedValueLost?: string };
+> & { estimatedValueLost?: string; note?: string };
 
 // ─── Production Request ───────────────────────────────────────────────────────
 
@@ -396,6 +399,7 @@ export interface DashboardData {
     totalVariants: number;
     totalStockUnits: number;
     stockValue: number;
+    stockPotentialProfit: number;
     lowStockVariants: number;
   };
   salesPeriod: {

@@ -45,6 +45,7 @@ export default function WriteOffPage() {
               <TableCell align="right">{t("writeoffs.qty")}</TableCell>
               <TableCell align="right">{t("writeoffs.valueLost")}</TableCell>
               <TableCell>{t("writeoffs.reason")}</TableCell>
+              <TableCell>{t("writeoffs.note")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -60,13 +61,16 @@ export default function WriteOffPage() {
                   <Typography color="error.main">€{report.estimatedValueLost}</Typography>
                 </TableCell>
                 <TableCell>
-                  <Typography variant="body2" noWrap sx={{ maxWidth: 300 }}>{report.reason}</Typography>
+                  <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>{report.reason}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>{report.note}</Typography>
                 </TableCell>
               </TableRow>
             ))}
             {!isLoading && data?.results?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>{t("writeoffs.noWriteOffs")}</Typography>
                 </TableCell>
               </TableRow>

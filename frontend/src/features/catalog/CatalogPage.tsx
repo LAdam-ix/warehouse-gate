@@ -173,21 +173,28 @@ function VariantActions({
 
 // ─── Expanded variant rows ────────────────────────────────────────────────────
 
-function ProductVariantStock({ productId, productName }: { productId: string; productName: string }) {
+const CATALOG_VARIANT_LIMIT = 5;
+
+function ProductVariantStock({ productId, productName, isService }: { productId: string; productName: string; isService?: boolean }) {
   const { t } = useTranslation();
   const { data: detail, isLoading } = useProduct(productId);
   const { showSku } = useContext(CatalogPrefsContext);
   const navigate = useNavigate();
+  const [showAll, setShowAll] = useState(false);
 
   if (isLoading) return <Box sx={{ p: 1.5 }}><CircularProgress size={16} /></Box>;
   if (!detail) return null;
 
   const activeVariants = detail.variants.filter((v) => v.isActive);
   const isMulti = activeVariants.length > 1 || !activeVariants[0]?.isDefault;
+  const visible = showAll || activeVariants.length <= CATALOG_VARIANT_LIMIT
+    ? activeVariants
+    : activeVariants.slice(0, CATALOG_VARIANT_LIMIT);
+  const hidden = activeVariants.length - visible.length;
 
   return (
     <Stack divider={<Divider />}>
-      {detail.variants.filter((v) => v.isActive).map((v) => {
+      {visible.map((v) => {
         const label = isMulti
           ? (variantLabel(v.attributeValues) || t("common.default"))
           : productName;
@@ -208,7 +215,7 @@ function ProductVariantStock({ productId, productName }: { productId: string; pr
             {/* Photo / swatch */}
             <Box sx={{ width: 28, flexShrink: 0 }}>
               {photoUrl
-                ? <Box component="img" src={photoUrl} sx={{ width: 24, height: 24, borderRadius: 0.5, objectFit: "cover" }} />
+                ? <Box component="img" src={photoUrl} sx={{ width: 32, height: 32, borderRadius: "3px", objectFit: "cover" }} />
                 : colorHex
                   ? <Box sx={{ width: 12, height: 12, borderRadius: "50%", bgcolor: colorHex, border: "1px solid", borderColor: "divider" }} />
                   : null}
@@ -237,16 +244,25 @@ function ProductVariantStock({ productId, productName }: { productId: string; pr
               €{v.effectiveCost}
             </Typography>
 
-            {/* Stock */}
-            <Chip label={v.totalStock} size="small" color={stockColor} sx={{ minWidth: 36 }} />
+            {/* Stock (physical only) */}
+            {!isService && <Chip label={v.totalStock} size="small" color={stockColor} sx={{ minWidth: 36 }} />}
 
             {/* Actions (stop propagation so clicks don't navigate) */}
             <Box onClick={(e) => e.stopPropagation()}>
-              <VariantActions variant={v} productName={productName} />
+              <VariantActions variant={v} productName={productName} isService={isService} />
             </Box>
           </Stack>
         );
       })}
+      {hidden > 0 && (
+        <Button
+          size="small"
+          sx={{ mx: 2, my: 0.5, alignSelf: "flex-start", textTransform: "none", color: "text.secondary" }}
+          onClick={() => setShowAll(true)}
+        >
+          +{hidden} {t("catalog.moreVariants", { count: hidden })}
+        </Button>
+      )}
     </Stack>
   );
 }
@@ -279,101 +295,96 @@ function ProductRow({ product }: { product: Product }) {
       sx={{ opacity: product.isActive ? 1 : 0.65, mb: 0.5, overflow: "hidden" }}
     >
       <Stack direction="row" alignItems="stretch" sx={{ minHeight: 68 }}>
-        {/* ── Main row: click → expand variants (multi) or navigate (single) ── */}
+        {/* ── Hoverable clickable zone: photo + name + price + stock ── */}
         <Stack
           direction="row"
           alignItems="center"
-          spacing={1.5}
-          sx={{
-            flex: 1, px: 1.5, py: 1,
-            cursor: "pointer",
-            "&:hover": { bgcolor: "action.hover" },
-            minWidth: 0,
-          }}
+          spacing={0}
+          sx={{ flex: 1, cursor: "pointer", "&:hover": { bgcolor: "action.hover" }, minWidth: 0 }}
           onClick={handleRowClick}
         >
-          {/* Photo */}
-          {product.primaryPhoto ? (
-            <Box
-              component="img"
-              src={product.primaryPhoto}
-              sx={{ width: 52, height: 52, borderRadius: 1, objectFit: "cover", flexShrink: 0 }}
-            />
-          ) : (
-            <Box sx={{
-              width: 52, height: 52, bgcolor: "grey.100", borderRadius: 1,
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }}>
-              <InventoryIcon sx={{ fontSize: 22, color: "grey.300" }} />
-            </Box>
-          )}
-
-          {/* Name + categories — clicking name always navigates */}
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 0.25 }}>
-              <Typography
-                fontWeight="bold" noWrap
-                sx={{ fontSize: "0.9rem", "&:hover": { textDecoration: "underline" } }}
-                onClick={(e) => { e.stopPropagation(); navigate(`/catalog/${product.id}`); }}
-              >
-                {product.name}
-              </Typography>
-              {!product.isActive && <ArchiveIcon sx={{ fontSize: 14 }} color="disabled" />}
-              {!isPhysical && (
-                <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic", flexShrink: 0 }}>
-                  {t("common.service")}
-                </Typography>
-              )}
-            </Stack>
-            {product.categoryNames.length > 0 && (
-              <Stack direction="row" flexWrap="wrap" gap={0.4}>
-                {product.categoryNames.map((n) => (
-                  <Chip
-                    key={n} label={n} size="small"
-                    sx={{
-                      height: 16, fontSize: "0.6rem",
-                      bgcolor: "grey.100", color: "text.secondary",
-                      border: "none",
-                      "& .MuiChip-label": { px: 0.75 },
-                    }}
-                  />
-                ))}
-              </Stack>
+          {/* Photo + name */}
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flex: 1, px: 1.5, py: 1, minWidth: 0 }}>
+            {product.primaryPhoto ? (
+              <Box
+                component="img"
+                src={product.primaryPhoto}
+                sx={{ width: 52, height: 52, borderRadius: "4px", objectFit: "cover", flexShrink: 0 }}
+              />
+            ) : (
+              <Box sx={{
+                width: 52, height: 52, bgcolor: "grey.100", borderRadius: "4px",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                <InventoryIcon sx={{ fontSize: 22, color: "grey.300" }} />
+              </Box>
             )}
-          </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 0.25 }}>
+                <Typography
+                  fontWeight="bold" noWrap
+                  sx={{ fontSize: "0.9rem", "&:hover": { textDecoration: "underline" } }}
+                  onClick={(e) => { e.stopPropagation(); navigate(`/catalog/${product.id}`); }}
+                >
+                  {product.name}
+                </Typography>
+                {!product.isActive && <ArchiveIcon sx={{ fontSize: 14 }} color="disabled" />}
+                {!isPhysical && (
+                  <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic", flexShrink: 0 }}>
+                    {t("common.service")}
+                  </Typography>
+                )}
+              </Stack>
+              {product.categoryNames.length > 0 && (
+                <Stack direction="row" flexWrap="wrap" gap={0.4}>
+                  {product.categoryNames.map((n) => (
+                    <Chip
+                      key={n} label={n} size="small"
+                      sx={{
+                        height: 16, fontSize: "0.6rem",
+                        bgcolor: "grey.100", color: "text.secondary",
+                        border: "none",
+                        "& .MuiChip-label": { px: 0.75 },
+                      }}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </Box>
+          </Stack>
 
-          {/* Price */}
-          <Typography variant="body2" fontWeight="medium" sx={{ flexShrink: 0, minWidth: 52, textAlign: "right" }}>
-            €{product.basePrice}
-          </Typography>
+          {/* Stock — fixed width column (physical only, empty for services) */}
+          <Stack alignItems="center" justifyContent="center" sx={{ width: 52, flexShrink: 0, py: 1 }}>
+            {isPhysical && (
+              <Chip
+                label={product.totalStock}
+                size="small"
+                color={stockColor}
+                variant="outlined"
+                sx={{ minWidth: 36 }}
+              />
+            )}
+          </Stack>
 
-          {/* Stock (physical only) */}
-          {isPhysical && (
-            <Chip
-              label={product.totalStock}
-              size="small"
-              color={stockColor}
-              variant="outlined"
-              sx={{ flexShrink: 0, minWidth: 36 }}
-            />
-          )}
+          {/* Price — fixed width column, right next to divider */}
+          <Stack alignItems="flex-end" justifyContent="center" sx={{ width: 80, flexShrink: 0, pr: 1.5, py: 1 }}>
+            <Typography variant="body2" fontWeight="medium">
+              €{product.basePrice}
+            </Typography>
+          </Stack>
         </Stack>
 
-        {/* ── Single-variant: quick actions ── */}
-        {isSingleVariant && isPhysical && singleVariant && (
-          <>
-            <Divider orientation="vertical" flexItem />
-            <Box sx={{ px: 0.75, display: "flex", alignItems: "center" }} onClick={(e) => e.stopPropagation()}>
-              <VariantActions variant={singleVariant} productName={product.name} />
-            </Box>
-          </>
-        )}
-
-        {/* ── Multi-variant: open-in-detail button + expand chevron ── */}
-        {!isSingleVariant && (
-          <>
-            <Divider orientation="vertical" flexItem />
-            <Stack direction="row" alignItems="center" sx={{ pr: 0.5 }}>
+        {/* ── Action column — fixed width so divider is always at the same position ── */}
+        <Divider orientation="vertical" flexItem />
+        <Box
+          sx={{ width: 76, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {isSingleVariant && singleVariant && (
+            <VariantActions variant={singleVariant} productName={product.name} isService={!isPhysical} />
+          )}
+          {!isSingleVariant && (
+            <Stack direction="row" alignItems="center" sx={{ width: "100%", justifyContent: "flex-end", pr: 0.5 }}>
               <Tooltip title={t("catalog.openProductPage")}>
                 <IconButton
                   size="small"
@@ -391,7 +402,7 @@ function ProductRow({ product }: { product: Product }) {
                   width: 36, flexShrink: 0, cursor: "pointer", py: 0.5,
                   "&:hover": { bgcolor: "action.hover" },
                 }}
-                onClick={() => setOpen((v) => !v)}
+                onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
               >
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.6rem" }}>
                   {product.variantCount}
@@ -401,15 +412,16 @@ function ProductRow({ product }: { product: Product }) {
                   : <ExpandMoreIcon fontSize="small" color="action" />}
               </Stack>
             </Stack>
-          </>
-        )}
+          )}
+          {/* single service: no actions, column stays empty */}
+        </Box>
       </Stack>
 
       {/* ── Expanded variant rows ── */}
       {!isSingleVariant && (
         <Collapse in={open}>
           <Divider />
-          <ProductVariantStock productId={product.id} productName={product.name} />
+          <ProductVariantStock productId={product.id} productName={product.name} isService={!isPhysical} />
         </Collapse>
       )}
     </Paper>
@@ -426,17 +438,17 @@ function CatalogHeader() {
       alignItems="center"
       sx={{ px: 1.5, pb: 0.5, borderBottom: "1px solid", borderColor: "divider" }}
     >
-      <Box sx={{ width: 36 + 12, flexShrink: 0 }} />{/* photo placeholder */}
+      <Box sx={{ width: 64, flexShrink: 0 }} />{/* photo (52) + gap (12) */}
       <Typography variant="caption" color="text.secondary" sx={{ flex: 1, minWidth: 0 }}>
         {t("catalog.product")}
       </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ minWidth: 52, textAlign: "right", mr: 1.5 }}>
-        {t("catalog.price")}
-      </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ minWidth: 36, textAlign: "right", mr: 1.5 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ width: 52, textAlign: "center", flexShrink: 0 }}>
         {t("catalog.stock")}
       </Typography>
-      <Box sx={{ width: 52 }} />{/* actions / expand placeholder */}
+      <Typography variant="caption" color="text.secondary" sx={{ width: 80, textAlign: "right", pr: 1.5, flexShrink: 0 }}>
+        {t("catalog.price")}
+      </Typography>
+      <Box sx={{ width: 77, flexShrink: 0 }} />{/* divider (1px) + actions (76) */}
     </Stack>
   );
 }

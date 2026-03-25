@@ -18,6 +18,7 @@ class DamageReportSerializer(serializers.ModelSerializer):
             "location_name",
             "quantity",
             "reason",
+            "note",
             "estimated_value_lost",
             "report_date",
             "created_at",

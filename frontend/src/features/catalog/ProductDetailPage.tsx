@@ -572,6 +572,8 @@ function VariantManager({
   const [valueDialog, setValueDialog] = useState<{ attr: VariantAttribute | null; editing: AttributeValue | null }>({ attr: null, editing: null });
   const [valueName, setValueName] = useState("");
   const [valueColor, setValueColor] = useState("");
+  const [valuePriceDelta, setValuePriceDelta] = useState("");
+  const [valueCostDelta, setValueCostDelta] = useState("");
   const updateAttrValue = useUpdateAttributeValue(valueDialog.editing?.id ?? "");
 
   // New variant dialog
@@ -635,8 +637,14 @@ function VariantManager({
         await createVariant.mutateAsync({
           product: productId,
           sku: "",
-          priceDelta: "0",
-          costDelta: "0",
+          priceDelta: String(ids.reduce((sum, id) => {
+            const v = attributes.flatMap((a) => a.values).find((v) => v.id === id);
+            return sum + parseFloat(v?.priceDelta ?? "0");
+          }, 0)),
+          costDelta: String(ids.reduce((sum, id) => {
+            const v = attributes.flatMap((a) => a.values).find((v) => v.id === id);
+            return sum + parseFloat(v?.costDelta ?? "0");
+          }, 0)),
           photo: null,
           galleryPhoto: null,
           lowStockThreshold: null,
@@ -670,18 +678,19 @@ function VariantManager({
     setAttrDialog({ open: false, editing: null });
   };
 
-  const openNewValue = (attr: VariantAttribute) => { setValueDialog({ attr, editing: null }); setValueName(""); setValueColor(""); };
-  const openEditValue = (attr: VariantAttribute, v: AttributeValue) => { setValueDialog({ attr, editing: v }); setValueName(v.value); setValueColor(v.colorHex ?? ""); };
+  const openNewValue = (attr: VariantAttribute) => { setValueDialog({ attr, editing: null }); setValueName(""); setValueColor(""); setValuePriceDelta(""); setValueCostDelta(""); };
+  const openEditValue = (attr: VariantAttribute, v: AttributeValue) => { setValueDialog({ attr, editing: v }); setValueName(v.value); setValueColor(v.colorHex ?? ""); setValuePriceDelta(parseFloat(v.priceDelta) !== 0 ? v.priceDelta : ""); setValueCostDelta(parseFloat(v.costDelta) !== 0 ? v.costDelta : ""); };
 
   const handleSaveValue = async () => {
     const { attr, editing } = valueDialog;
     if (!attr) return;
     const isColor = attr.attributeType === "color";
+    const deltas = { priceDelta: valuePriceDelta || "0", costDelta: valueCostDelta || "0" };
     if (editing) {
-      await updateAttrValue.mutateAsync({ value: valueName, colorHex: isColor ? (valueColor || null) : null });
+      await updateAttrValue.mutateAsync({ value: valueName, colorHex: isColor ? (valueColor || null) : null, ...deltas });
       toast.success(t("variants.valueUpdated"));
     } else {
-      await createAttrValue.mutateAsync({ value: valueName, colorHex: isColor ? (valueColor || null) : null, sortOrder: attr.values.length, attribute: attr.id });
+      await createAttrValue.mutateAsync({ value: valueName, colorHex: isColor ? (valueColor || null) : null, sortOrder: attr.values.length, attribute: attr.id, ...deltas });
       toast.success(t("variants.valueAdded"));
     }
     setValueDialog({ attr: null, editing: null });
@@ -784,7 +793,16 @@ function VariantManager({
                 {attr.values.map((v) => (
                   <Chip
                     key={v.id}
-                    label={v.value}
+                    label={(() => {
+                      const pd = parseFloat(v.priceDelta);
+                      const cd = parseFloat(v.costDelta);
+                      const parts = [v.value];
+                      const deltas = [];
+                      if (pd !== 0) deltas.push(`p${pd > 0 ? "+" : ""}€${pd}`);
+                      if (cd !== 0) deltas.push(`c${cd > 0 ? "+" : ""}€${cd}`);
+                      if (deltas.length) parts.push(deltas.join(" "));
+                      return parts.join(" · ");
+                    })()}
                     size="small"
                     icon={v.colorHex ? (
                       <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: v.colorHex, ml: 0.5 }} />
@@ -987,6 +1005,25 @@ function VariantManager({
                 </Stack>
               </>
             )}
+            <Divider />
+            <Stack direction="row" spacing={1}>
+              <TextField
+                label="Price delta (€)" size="small" type="number" sx={{ flex: 1 }}
+                value={valuePriceDelta}
+                onChange={(e) => setValuePriceDelta(e.target.value)}
+                placeholder="0"
+                slotProps={{ htmlInput: { step: "0.01" } }}
+                helperText="Added to variant price"
+              />
+              <TextField
+                label="Cost delta (€)" size="small" type="number" sx={{ flex: 1 }}
+                value={valueCostDelta}
+                onChange={(e) => setValueCostDelta(e.target.value)}
+                placeholder="0"
+                slotProps={{ htmlInput: { step: "0.01" } }}
+                helperText="Added to variant cost"
+              />
+            </Stack>
           </Stack>
         </DialogContent>
         <DialogActions>

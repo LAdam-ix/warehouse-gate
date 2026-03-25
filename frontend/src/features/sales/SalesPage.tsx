@@ -18,15 +18,9 @@ const STATUS_COLORS = {
 export default function SalesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const createSale = useCreateSale();
   const [statusFilter, setStatusFilter] = useState("");
   const { data, isLoading } = useSales(statusFilter ? { status: statusFilter } : undefined);
-  const createSale = useCreateSale();
-
-  const handleNewSale = async () => {
-    const sale = await createSale.mutateAsync({});
-    navigate(`/sales/${sale.id}`);
-  };
-
   return (
     <Stack spacing={2}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -34,8 +28,11 @@ export default function SalesPage() {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={handleNewSale}
           disabled={createSale.isPending}
+          onClick={async () => {
+            const sale = await createSale.mutateAsync({});
+            navigate(`/sales/${sale.id}`);
+          }}
         >
           {t("sales.newSale")}
         </Button>

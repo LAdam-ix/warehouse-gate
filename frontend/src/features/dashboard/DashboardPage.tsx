@@ -12,19 +12,22 @@ import type { DashboardPeriod } from "../../types/api";
 import { useTranslation } from "react-i18next";
 
 function StatCard({
-  title, value, sub, color, small,
+  title, value, sub, color, small, compact,
 }: {
   title: string;
   value: string | number;
   sub?: string;
   color?: string;
   small?: boolean;
+  compact?: boolean;
 }) {
   return (
     <Card variant="outlined" sx={{ height: "100%" }}>
-      <CardContent>
-        <Typography variant="body2" color="text.secondary" gutterBottom>{title}</Typography>
-        <Typography variant={small ? "h6" : "h5"} fontWeight="bold" color={color ?? "text.primary"}>
+      <CardContent sx={compact ? { p: 1.5, "&:last-child": { pb: 1.5 } } : undefined}>
+        <Typography variant={compact ? "caption" : "body2"} color="text.secondary" gutterBottom display="block">
+          {title}
+        </Typography>
+        <Typography variant={compact ? "h6" : small ? "h6" : "h5"} fontWeight="bold" color={color ?? "text.primary"}>
           {value}
         </Typography>
         {sub && <Typography variant="caption" color="text.secondary">{sub}</Typography>}
@@ -82,14 +85,14 @@ export default function DashboardPage() {
       <Box>
         <Typography variant="overline" color="text.secondary">{t("dashboard.inventory")}</Typography>
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
-          <Grid size={{ xs: 6, sm: 3 }}>
-            <StatCard title={t("dashboard.products")} value={catalog.totalProducts} />
+          <Grid size={{ xs: 4, sm: 2 }}>
+            <StatCard title={t("dashboard.products")} value={catalog.totalProducts} compact />
           </Grid>
-          <Grid size={{ xs: 6, sm: 3 }}>
-            <StatCard title={t("dashboard.skusVariants")} value={catalog.totalVariants} />
+          <Grid size={{ xs: 4, sm: 2 }}>
+            <StatCard title={t("dashboard.variantsSKUs")} value={catalog.totalVariants} compact />
           </Grid>
-          <Grid size={{ xs: 6, sm: 3 }}>
-            <StatCard title={t("dashboard.unitsInStock")} value={catalog.totalStockUnits} />
+          <Grid size={{ xs: 4, sm: 2 }}>
+            <StatCard title={t("dashboard.unitsInStock")} value={catalog.totalStockUnits} compact />
           </Grid>
           <Grid size={{ xs: 6, sm: 3 }}>
             <StatCard
@@ -97,6 +100,16 @@ export default function DashboardPage() {
               value={`€${catalog.stockValue.toFixed(2)}`}
               color="info.main"
               sub={t("dashboard.stockValueSub")}
+              small
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 3 }}>
+            <StatCard
+              title={t("dashboard.stockPotentialProfit")}
+              value={`€${catalog.stockPotentialProfit.toFixed(2)}`}
+              color={catalog.stockPotentialProfit >= 0 ? "success.main" : "error.main"}
+              sub={t("dashboard.stockPotentialProfitSub")}
+              small
             />
           </Grid>
         </Grid>

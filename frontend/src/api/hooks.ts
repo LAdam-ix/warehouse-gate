@@ -95,6 +95,11 @@ export const useDeleteCategory = () => {
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 
+// TODO(pagination): currently fetches only the first backend page — silent data loss once catalog grows.
+// Plan: CatalogPage → standard DRF pagination (page param, prev/next buttons) so product X is always on page N.
+// Plan: picker panels (ProductPickerPanel and similar) → useInfiniteQuery + IntersectionObserver sentinel at
+//       list bottom to auto-load next page on scroll; search already hits server so it works at any scale.
+// React Query supports both patterns: useQuery for paged catalog, useInfiniteQuery for picker scroll.
 export const useProducts = (params?: Record<string, unknown>) =>
   useQuery({
     queryKey: ["products", params],
@@ -352,11 +357,12 @@ export const useDeleteLocation = () => {
 
 // ─── Stock ───────────────────────────────────────────────────────────────────
 
-export const useStockEntries = (params?: Record<string, unknown>) =>
+export const useStockEntries = (params?: Record<string, unknown>, options: { enabled?: boolean } = {}) =>
   useQuery({
     queryKey: ["stock-entries", params],
     queryFn: () =>
       get<PaginatedResponse<StockEntry>>("/stock-entries/", params).then((r) => r.results),
+    enabled: options.enabled ?? true,
   });
 
 export const useStockMovements = (params?: Record<string, unknown>) =>
@@ -483,6 +489,14 @@ export const useVoidSale = (id: string) => {
       qc.invalidateQueries({ queryKey: ["sales"] });
       qc.invalidateQueries({ queryKey: ["stock-entries"] });
     },
+  });
+};
+
+export const useDeleteSale = (id: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => del(`/sales/${id}/`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sales"] }),
   });
 };
 

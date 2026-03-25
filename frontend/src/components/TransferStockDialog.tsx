@@ -75,9 +75,9 @@ function ProductPickerRow({
         }}
       >
         {product.primaryPhoto
-          ? <Box component="img" src={product.primaryPhoto} sx={{ width: 28, height: 28, borderRadius: 0.5, objectFit: "cover", flexShrink: 0 }} />
-          : <Box sx={{ width: 28, height: 28, bgcolor: "grey.100", borderRadius: 0.5, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <InventoryIcon sx={{ fontSize: 14, color: "grey.400" }} />
+          ? <Box component="img" src={product.primaryPhoto} sx={{ width: 36, height: 36, borderRadius: "3px", objectFit: "cover", flexShrink: 0 }} />
+          : <Box sx={{ width: 36, height: 36, bgcolor: "grey.100", borderRadius: "3px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <InventoryIcon sx={{ fontSize: 18, color: "grey.400" }} />
             </Box>
         }
         <Typography variant="body2" sx={{ flex: 1 }} noWrap>{product.name}</Typography>
@@ -92,9 +92,9 @@ function ProductPickerRow({
         sx={{ p: 1, cursor: "pointer" }} onClick={() => setOpen((v) => !v)}
       >
         {product.primaryPhoto
-          ? <Box component="img" src={product.primaryPhoto} sx={{ width: 28, height: 28, borderRadius: 0.5, objectFit: "cover", flexShrink: 0 }} />
-          : <Box sx={{ width: 28, height: 28, bgcolor: "grey.100", borderRadius: 0.5, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <InventoryIcon sx={{ fontSize: 14, color: "grey.400" }} />
+          ? <Box component="img" src={product.primaryPhoto} sx={{ width: 36, height: 36, borderRadius: "3px", objectFit: "cover", flexShrink: 0 }} />
+          : <Box sx={{ width: 36, height: 36, bgcolor: "grey.100", borderRadius: "3px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <InventoryIcon sx={{ fontSize: 18, color: "grey.400" }} />
             </Box>
         }
         <Typography variant="body2" sx={{ flex: 1 }} noWrap>{product.name}</Typography>

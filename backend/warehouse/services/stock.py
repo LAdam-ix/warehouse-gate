@@ -54,12 +54,14 @@ def add_stock(
     note: str = "",
     movement_date=None,
     user=None,
+    batch_id=None,
 ) -> StockMovement:
     """Add produced/received stock. quantity must be positive."""
     if quantity <= 0:
         raise ValueError("quantity must be positive for add_stock")
 
-    batch_id = uuid.uuid4()
+    if batch_id is None:
+        batch_id = uuid.uuid4()
 
     entry = _get_or_create_entry(variant, location)
     entry.quantity += quantity

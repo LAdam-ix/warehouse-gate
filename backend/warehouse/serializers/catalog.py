@@ -60,7 +60,7 @@ class AttributeValueSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AttributeValue
-        fields = ["id", "value", "color_hex", "sort_order", "attribute"]
+        fields = ["id", "value", "color_hex", "sort_order", "price_delta", "cost_delta", "attribute"]
         read_only_fields = ["id"]
 
 

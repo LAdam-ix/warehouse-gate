@@ -66,7 +66,7 @@ function VariantQuickAdd({
   return (
     <Stack direction="row" alignItems="center" spacing={1} sx={{ py: 0.75, px: 2 }}>
       {photoUrl && (
-        <Box component="img" src={photoUrl} sx={{ width: 28, height: 28, borderRadius: 0.5, objectFit: "cover" }} />
+        <Box component="img" src={photoUrl} sx={{ width: 32, height: 32, borderRadius: "3px", objectFit: "cover" }} />
       )}
       {!photoUrl && colorHex && (
         <Box sx={{ width: 14, height: 14, borderRadius: "50%", flexShrink: 0, bgcolor: colorHex }} />
@@ -103,19 +103,15 @@ function VariantRows({
 }) {
   const { t } = useTranslation();
   const { data: detail, isLoading } = useProduct(productId);
-  const [showAll, setShowAll] = useState(false);
-
   if (isLoading) return <Box sx={{ p: 1.5 }}><CircularProgress size={16} /></Box>;
   if (!detail) return null;
 
   const active = [...detail.variants.filter((v) => v.isActive)]
     .sort((a, b) => a.totalStock - b.totalStock);
-  const visible = showAll || active.length <= 3 ? active : active.slice(0, 3);
-  const hidden = active.length - visible.length;
 
   return (
     <Stack divider={<Divider />}>
-      {visible.map((v) => {
+      {active.map((v) => {
         const vLabel = v.isDefault
           ? productName
           : `${productName} — ${variantLabel(v.attributeValues)}`;
@@ -137,15 +133,6 @@ function VariantRows({
           />
         );
       })}
-      {hidden > 0 && (
-        <Button
-          size="small"
-          sx={{ mx: 2, my: 0.5, alignSelf: "flex-start", textTransform: "none" }}
-          onClick={() => setShowAll(true)}
-        >
-          {t(hidden > 1 ? "stock.addStockPage.moreVariants_other" : "stock.addStockPage.moreVariants_one", { count: hidden })}
-        </Button>
-      )}
     </Stack>
   );
 }
@@ -168,10 +155,10 @@ function SingleVariantRow({
       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ p: 1.5 }}>
         {product.primaryPhoto ? (
           <Box component="img" src={product.primaryPhoto}
-            sx={{ width: 40, height: 40, borderRadius: 1, objectFit: "cover", flexShrink: 0 }} />
+            sx={{ width: 48, height: 48, borderRadius: "4px", objectFit: "cover", flexShrink: 0 }} />
         ) : (
-          <Box sx={{ width: 40, height: 40, bgcolor: "grey.100", borderRadius: 1, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <InventoryIcon sx={{ fontSize: 20, color: "grey.400" }} />
+          <Box sx={{ width: 48, height: 48, bgcolor: "grey.100", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <InventoryIcon sx={{ fontSize: 24, color: "grey.400" }} />
           </Box>
         )}
         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -244,10 +231,10 @@ function MultiVariantRow({
       >
         {product.primaryPhoto ? (
           <Box component="img" src={product.primaryPhoto}
-            sx={{ width: 40, height: 40, borderRadius: 1, objectFit: "cover", flexShrink: 0 }} />
+            sx={{ width: 48, height: 48, borderRadius: "4px", objectFit: "cover", flexShrink: 0 }} />
         ) : (
-          <Box sx={{ width: 40, height: 40, bgcolor: "grey.100", borderRadius: 1, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <InventoryIcon sx={{ fontSize: 20, color: "grey.400" }} />
+          <Box sx={{ width: 48, height: 48, bgcolor: "grey.100", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <InventoryIcon sx={{ fontSize: 24, color: "grey.400" }} />
           </Box>
         )}
         <Box sx={{ flex: 1, minWidth: 0 }}>

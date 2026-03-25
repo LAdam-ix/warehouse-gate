@@ -1,3 +1,4 @@
+import uuid
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -93,6 +94,8 @@ class AddStockView(APIView):
             if not default_location:
                 return Response({"detail": "No location found for this firm."}, status=400)
 
+        shared_batch_id = uuid.uuid4()
+
         movements = []
         errors = []
         for line in data["lines"]:
@@ -118,6 +121,7 @@ class AddStockView(APIView):
                 note=data["note"],
                 movement_date=data.get("movement_date"),
                 user=user,
+                batch_id=shared_batch_id,
             )
             movements.append(movement)
 
