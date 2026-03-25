@@ -19,7 +19,8 @@ class Sale(AuditModel):
     firm = models.ForeignKey("warehouse.Firm", on_delete=models.CASCADE, related_name="sales")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     note = models.TextField(blank=True)
-    # Free-text for now; FK to Customer when merged with fakturuj si
+    # TODO: Remove customer_label — customer will come from the linked fakturuj si
+    # invoice (via invoice_id) or a shared Customer model. Not displayed in the UI.
     customer_label = models.CharField(max_length=255, blank=True)
 
     # fakturuj si integration hooks (nullable until connected)

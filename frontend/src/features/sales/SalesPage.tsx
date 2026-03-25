@@ -55,7 +55,7 @@ export default function SalesPage() {
           <TableHead>
             <TableRow>
               <TableCell>{t("sales.statusFilter")}</TableCell>
-              <TableCell>{t("sales.customer")}</TableCell>
+              <TableCell>{t("sales.noteColumn")}</TableCell>
               <TableCell align="right">{t("sales.lines")}</TableCell>
               <TableCell align="right">{t("sales.total")}</TableCell>
               <TableCell align="right">{t("sales.profit")}</TableCell>
@@ -77,7 +77,11 @@ export default function SalesPage() {
                     color={STATUS_COLORS[sale.status]}
                   />
                 </TableCell>
-                <TableCell>{sale.customerLabel || <Typography variant="body2" color="text.secondary">—</Typography>}</TableCell>
+                <TableCell>
+                  <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
+                    {sale.note || <Typography component="span" color="text.secondary">—</Typography>}
+                  </Typography>
+                </TableCell>
                 <TableCell align="right">{sale.lineCount}</TableCell>
                 <TableCell align="right">€{sale.total}</TableCell>
                 <TableCell align="right">

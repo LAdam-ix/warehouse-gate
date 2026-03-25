@@ -239,7 +239,7 @@ export default function DashboardPage() {
                   size="small"
                   color={s.status === "finalized" ? "success" : s.status === "voided" ? "default" : "warning"}
                 />
-                <Typography variant="body2" sx={{ flex: 1 }}>{s.customerLabel || "—"}</Typography>
+                <Typography variant="body2" noWrap sx={{ flex: 1 }}>{s.note || "—"}</Typography>
                 <Typography variant="body2" fontWeight="bold">€{s.total.toFixed(2)}</Typography>
                 <Typography variant="caption" color="text.secondary">
                   {new Date(s.createdAt).toLocaleDateString()}

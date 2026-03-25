@@ -318,6 +318,7 @@
     "finalized": "Finalized",
     "voided": "Voided",
     "customer": "Customer",
+    "noteColumn": "Note",
     "lines": "Lines",
     "total": "Total",
     "profit": "Profit",
