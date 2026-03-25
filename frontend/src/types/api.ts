@@ -427,11 +427,7 @@ export interface DashboardData {
     count: number;
     estimatedValueLost: number;
   };
-  recentSales: Array<{
-    id: string;
-    status: string;
-    customerLabel: string;
-    total: number;
-    createdAt: string;
-  }>;
+  // Dashboard returns a subset of Sale fields with total as number (float() in Python).
+  // This differs from Sale.total which is string (DRF DecimalField serialization).
+  recentSales: Array<Pick<Sale, "id" | "status" | "note" | "createdAt"> & { total: number }>;
 }

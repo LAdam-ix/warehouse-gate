@@ -103,6 +103,7 @@ class DashboardView(APIView):
                     "id": str(s.id),
                     "status": s.status,
                     "customer_label": s.customer_label,
+                    "note": s.note,
                     "total": float(s.total),
                     "created_at": s.created_at,
                 }

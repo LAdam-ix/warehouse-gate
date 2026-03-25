@@ -111,7 +111,7 @@ class SaleListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sale
         fields = [
-            "id", "status", "customer_label", "invoice_id", "credit_note_id",
+            "id", "status", "note", "customer_label", "invoice_id", "credit_note_id",
             "total", "profit", "finalized_at", "line_count",
             "created_at", "updated_at",
         ]
