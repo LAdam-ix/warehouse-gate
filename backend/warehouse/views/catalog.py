@@ -92,6 +92,17 @@ class ProductViewSet(FirmScopedMixin, viewsets.ModelViewSet):
         photo.delete()
         return Response(status=204)
 
+    @action(detail=True, methods=["post"], url_path="reorder-photos")
+    def reorder_photos(self, request, pk=None):
+        product = self.get_object()
+        order = request.data.get("order", [])  # list of photo IDs in desired order
+        photos = {str(p.id): p for p in product.photos.all()}
+        for i, photo_id in enumerate(order):
+            if photo_id in photos:
+                photos[photo_id].sort_order = i
+                photos[photo_id].save(update_fields=["sort_order"])
+        return Response(status=204)
+
     @action(detail=True, methods=["patch"], url_path="photos/(?P<photo_id>[^/.]+)/set-primary")
     def set_primary_photo(self, request, pk=None, photo_id=None):
         product = self.get_object()

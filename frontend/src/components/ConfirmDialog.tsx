@@ -46,7 +46,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       <Dialog open={!!state} onClose={() => handleClose(false)} maxWidth="xs" fullWidth>
         <DialogTitle>{state?.title}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2">{state?.message}</Typography>
+          <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{state?.message}</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => handleClose(false)}>{t("confirmDialog.cancel")}</Button>

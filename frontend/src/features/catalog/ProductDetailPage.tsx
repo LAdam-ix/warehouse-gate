@@ -22,15 +22,16 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import SortIcon from "@mui/icons-material/Sort";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import { toast } from "react-toastify";
 import {
   useProduct, useUpdateProduct, useDeleteProduct,
-  useUploadProductPhoto, useDeleteProductPhoto, useSetPrimaryPhoto, useProductTree,
+  useUploadProductPhoto, useDeleteProductPhoto, useSetPrimaryPhoto, useReorderPhotos, useProductTree,
   useUpdateVariant, useDeleteVariant, useUploadVariantPhoto,
   useCategories, useCreateCategory,
   useCreateVariant, useCreateAttribute, useUpdateAttribute, useReorderAttributes, useDeleteAttribute,
-  useCreateAttributeValue, useUpdateAttributeValue, useDeleteAttributeValue,
+  useCreateAttributeValue, useUpdateAttributeValue, useDeleteAttributeValue, useReorderAttributeValues,
   useProductionRequests, useCreateProductionRequest, useFulfillProductionRequest, useCancelProductionRequest,
 } from "../../api/hooks";
 import { useConfirm } from "../../components/ConfirmDialog";
@@ -543,7 +544,9 @@ function VariantManager({
   const deleteAttr = useDeleteAttribute();
   const createAttrValue = useCreateAttributeValue();
   const deleteAttrValue = useDeleteAttributeValue();
+  const reorderAttrValues = useReorderAttributeValues();
   const createVariant = useCreateVariant();
+  const deleteVariant = useDeleteVariant();
 
   // New / edit attribute dialog
   const [attrDialog, setAttrDialog] = useState<{ open: boolean; editing: VariantAttribute | null }>({ open: false, editing: null });
@@ -641,6 +644,11 @@ function VariantManager({
           attributeValueIds: ids,
         });
       }
+      // Auto-remove the default variant if it has no stock and no attribute values
+      const defaultVariant = variants.find((v) => v.isDefault && v.attributeValues.length === 0);
+      if (defaultVariant && defaultVariant.totalStock === 0) {
+        try { await deleteVariant.mutateAsync(defaultVariant.id); } catch { /* has movements, leave it */ }
+      }
       setGenOpen(false);
       toast.success(t("variants.generateDialog.created_other", { count: newCombinations.length }));
     } finally {
@@ -703,8 +711,18 @@ function VariantManager({
     toast.success(t("variants.updated"));
   };
 
-  const activeVariants = variants.filter((v) => v.isActive);
-  const archivedVariants = variants.filter((v) => !v.isActive);
+  const sortVariants = (vs: typeof variants) =>
+    [...vs].sort((a, b) => {
+      // Sort by each attribute value's sortOrder in sequence, then fall back to label
+      for (let i = 0; i < Math.max(a.attributeValues.length, b.attributeValues.length); i++) {
+        const ao = a.attributeValues[i]?.sortOrder ?? 0;
+        const bo = b.attributeValues[i]?.sortOrder ?? 0;
+        if (ao !== bo) return ao - bo;
+      }
+      return variantLabel(a.attributeValues).localeCompare(variantLabel(b.attributeValues));
+    });
+  const activeVariants = sortVariants(variants.filter((v) => v.isActive));
+  const archivedVariants = sortVariants(variants.filter((v) => !v.isActive));
   const confirm = useConfirm();
 
   return (
@@ -737,6 +755,16 @@ function VariantManager({
                 </Stack>
                 <Typography variant="body2" fontWeight="medium" sx={{ flex: 1 }}>{attr.name}</Typography>
                 <Chip label={attr.attributeType} size="small" variant="outlined" sx={{ height: 16, fontSize: "0.6rem" }} />
+                {attr.values.length > 1 && (
+                  <Tooltip title="Sort values A→Z">
+                    <IconButton size="small" disabled={reorderAttrValues.isPending} onClick={() => {
+                      const sorted = [...attr.values].sort((a, b) => a.value.localeCompare(b.value));
+                      reorderAttrValues.mutate(sorted.map((v, i) => ({ id: v.id, sortOrder: i })));
+                    }}>
+                      <SortIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
                 <Tooltip title={t("variants.renameAttributeTooltip")}>
                   <IconButton size="small" onClick={() => openEditAttr(attr)}>
                     <EditIcon sx={{ fontSize: 14 }} />
@@ -763,7 +791,7 @@ function VariantManager({
                     ) : undefined}
                     onClick={() => openEditValue(attr, v)}
                     onDelete={async () => {
-                      if (!await confirm(t("variants.deleteValueConfirm", { value: v.value }), { title: t("variants.deleteValueTitle"), confirmLabel: t("common.delete") })) return;
+                      if (!await confirm(`${t("variants.deleteValueConfirm", { value: v.value })}\n\n${t("variants.deleteValueWarning")}`, { title: t("variants.deleteValueTitle"), confirmLabel: t("common.delete") })) return;
                       await deleteAttrValue.mutateAsync(v.id);
                       toast.success(t("variants.valueDeleted"));
                     }}
@@ -938,9 +966,24 @@ function VariantManager({
                     placeholder="#ff0000"
                     sx={{ flex: 1 }}
                   />
-                  {valueColor && (
-                    <Box sx={{ width: 28, height: 28, borderRadius: "50%", bgcolor: valueColor, border: "1px solid", borderColor: "divider" }} />
-                  )}
+                  <Box sx={{ position: "relative" }}>
+                    <Box
+                      component="input"
+                      type="color"
+                      value={valueColor || "#ffffff"}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setValueColor(e.target.value)}
+                      sx={{
+                        position: "absolute", inset: 0, opacity: 0,
+                        width: "100%", height: "100%", cursor: "pointer", border: "none", p: 0,
+                      }}
+                    />
+                    <Box sx={{
+                      width: 32, height: 32, borderRadius: "50%",
+                      bgcolor: valueColor || "grey.200",
+                      border: "2px solid", borderColor: "divider",
+                      cursor: "pointer", pointerEvents: "none",
+                    }} />
+                  </Box>
                 </Stack>
               </>
             )}
@@ -1529,6 +1572,9 @@ export default function ProductDetailPage() {
   const uploadPhoto = useUploadProductPhoto(productId!);
   const deletePhoto = useDeleteProductPhoto(productId!);
   const setPrimary = useSetPrimaryPhoto(productId!);
+  const reorderPhotos = useReorderPhotos(productId!);
+  const [dragPhotoId, setDragPhotoId] = useState<string | null>(null);
+  const [dragOverPhotoId, setDragOverPhotoId] = useState<string | null>(null);
 
   if (isLoading) return <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}><CircularProgress /></Box>;
   if (!product) return <Typography>{t("productDetail.notFound")}</Typography>;
@@ -1820,7 +1866,7 @@ export default function ProductDetailPage() {
 
           {/* Photos */}
           <Paper variant="outlined" sx={{ p: 2, position: "relative", transition: "border-color 0.15s", borderColor: photoDragging ? "primary.main" : undefined, borderStyle: photoDragging ? "dashed" : undefined }}
-            onDragOver={(e) => { e.preventDefault(); setPhotoDragging(true); }}
+            onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setPhotoDragging(true); } }}
             onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setPhotoDragging(false); }}
             onDrop={(e) => { e.preventDefault(); setPhotoDragging(false); Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/")).forEach((f) => uploadPhoto.mutate(f)); }}
           >
@@ -1829,23 +1875,49 @@ export default function ProductDetailPage() {
             </Typography>
             <Stack direction="row" spacing={1} alignItems="flex-start" flexWrap="wrap" sx={{ gap: 1 }}>
               {product.photos.map((photo) => (
-                <Box key={photo.id} sx={{ position: "relative" }}>
+                <Box
+                  key={photo.id}
+                  draggable
+                  onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", photo.id); setDragPhotoId(photo.id); }}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverPhotoId(photo.id); }}
+                  onDragLeave={() => setDragOverPhotoId(null)}
+                  onDrop={(e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    const fromId = e.dataTransfer.getData("text/plain");
+                    if (!fromId || fromId === photo.id) { setDragPhotoId(null); setDragOverPhotoId(null); return; }
+                    const ids = product.photos.map((p) => p.id);
+                    const fromIdx = ids.indexOf(fromId);
+                    const toIdx = ids.indexOf(photo.id);
+                    ids.splice(fromIdx, 1);
+                    ids.splice(toIdx, 0, fromId);
+                    reorderPhotos.mutate(ids);
+                    setDragPhotoId(null); setDragOverPhotoId(null);
+                  }}
+                  onDragEnd={() => { setDragPhotoId(null); setDragOverPhotoId(null); }}
+                  sx={{ position: "relative", opacity: dragPhotoId === photo.id ? 0.4 : 1, outline: dragOverPhotoId === photo.id && dragPhotoId !== photo.id ? "2px dashed" : "none", outlineColor: "primary.main", borderRadius: 1.5, cursor: "grab", transition: "opacity 0.15s" }}
+                >
                   <Box component="img" src={photo.image} alt=""
                     sx={{ width: 90, height: 90,
                       borderRadius: 1.5, objectFit: "cover", display: "block",
                       border: "1px solid", borderColor: photo.isPrimary ? "#f59e0b" : "divider",
-                      cursor: photo.isPrimary ? "default" : "pointer" }}
-                    onClick={() => !photo.isPrimary && setPrimary.mutate(photo.id)}
+                      cursor: "grab", userSelect: "none", pointerEvents: "none" }}
                   />
                   {photo.isPrimary && (
                     <Box sx={{ position: "absolute", inset: 0, borderRadius: 1.5, border: "5px solid #f59e0b", pointerEvents: "none" }} />
                   )}
-                  {photo.isPrimary && <StarIcon sx={{ position: "absolute", top: 4, left: 4, fontSize: 14, color: "#fff" }} />}
+                  {photo.isPrimary && <StarIcon sx={{ position: "absolute", top: 4, left: 4, fontSize: 14, color: "#fff", pointerEvents: "none" }} />}
                   <IconButton size="small"
                     sx={{ position: "absolute", top: 4, right: 4, bgcolor: "rgba(0,0,0,0.55)", color: "white", p: 0.5 }}
                     onClick={() => deletePhoto.mutate(photo.id)}>
                     <DeleteIcon sx={{ fontSize: 16 }} />
                   </IconButton>
+                  {!photo.isPrimary && (
+                    <IconButton size="small"
+                      sx={{ position: "absolute", bottom: 4, right: 4, bgcolor: "rgba(0,0,0,0.45)", color: "white", p: 0.25 }}
+                      onClick={() => setPrimary.mutate(photo.id)}>
+                      <StarIcon sx={{ fontSize: 12 }} />
+                    </IconButton>
+                  )}
                 </Box>
               ))}
               <PhotoDropZone onFiles={(files) => files.forEach((f) => uploadPhoto.mutate(f))} pending={uploadPhoto.isPending} />

@@ -15,7 +15,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <FirmProvider>
         <App />
-        <ToastContainer position="bottom-right" autoClose={3000} />
+        <ToastContainer position="bottom-right" autoClose={2500} limit={3} newestOnTop />
         <ReactQueryDevtools initialIsOpen={false} />
       </FirmProvider>
     </QueryClientProvider>

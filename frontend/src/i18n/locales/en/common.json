@@ -223,6 +223,7 @@
     "valueDeleted": "Value deleted",
     "deleteValueConfirm": "Delete value \"{{value}}\"?",
     "deleteValueTitle": "Delete Value",
+    "deleteValueWarning": "Warning: this will remove the value from any variants that currently use it.",
     "renameAttributeTooltip": "Rename attribute",
     "deleteAttributeTooltip": "Delete attribute",
     "renameTooltip": "Rename",

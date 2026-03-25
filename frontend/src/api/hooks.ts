@@ -175,6 +175,15 @@ export const useSetPrimaryPhoto = (productId: string) => {
   });
 };
 
+export const useReorderPhotos = (productId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (order: string[]) =>
+      axiosInstance.post(`/products/${productId}/reorder-photos/`, { order }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["products", productId] }),
+  });
+};
+
 
 // ─── Variants ────────────────────────────────────────────────────────────────
 
@@ -263,6 +272,18 @@ export const useCreateAttributeValue = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: AttributeValueCreate) => post<unknown>("/attribute-values/", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
+  });
+};
+
+export const useReorderAttributeValues = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (values: { id: string; sortOrder: number }[]) => {
+      for (const { id, sortOrder } of values) {
+        await patch(`/attribute-values/${id}/`, { sortOrder });
+      }
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
   });
 };
