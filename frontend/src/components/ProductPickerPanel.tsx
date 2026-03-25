@@ -218,9 +218,16 @@ function ProductRow({
           )}
         </Box>
         {showStock && (() => {
-          const singleV = isSingle ? detail?.variants.find((v) => v.isActive) : null;
-          if (singleV?.stockByLocation) {
-            return <StockChips variant={singleV} locations={locations} />;
+          // Aggregate stockByLocation across all active variants
+          const activeVars = detail?.variants.filter((v) => v.isActive) ?? [];
+          if (activeVars.length > 0 && activeVars.some((v) => v.stockByLocation)) {
+            const aggregated: Record<string, number> = {};
+            for (const v of activeVars) {
+              for (const [locId, qty] of Object.entries(v.stockByLocation ?? {})) {
+                aggregated[locId] = (aggregated[locId] ?? 0) + qty;
+              }
+            }
+            return <StockChips variant={{ totalStock: product.totalStock, stockByLocation: aggregated }} locations={locations} />;
           }
           return <Chip label={`${product.totalStock}`} size="small" variant="outlined" />;
         })()}

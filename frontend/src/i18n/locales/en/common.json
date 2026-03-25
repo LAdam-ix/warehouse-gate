@@ -139,6 +139,7 @@
     "noAttributes": "No attributes yet. Add an attribute (e.g. \"Color\", \"Size\") to enable product variants.",
     "variants": "Variants",
     "noVariants": "No variants.",
+    "totalStock": "Total stock",
     "generateCombinations": "Generate combinations",
     "addVariant": "Add Variant",
     "addAttributeDialog": {

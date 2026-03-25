@@ -842,6 +842,30 @@ function VariantManager({
         <Typography variant="body2" color="text.secondary">{t("variants.noVariants")}</Typography>
       ) : (
         <Stack spacing={1}>
+          {/* Aggregate stock summary across all active variants */}
+          {activeVariants.length > 0 && (() => {
+            const agg: Record<string, number> = {};
+            let total = 0;
+            for (const v of activeVariants) {
+              total += v.totalStock;
+              for (const [locId, qty] of Object.entries(v.stockByLocation ?? {})) {
+                agg[locId] = (agg[locId] ?? 0) + qty;
+              }
+            }
+            const locsWithStock = locations.filter((l) => agg[l.id] > 0);
+            return locsWithStock.length > 0 ? (
+              <Stack direction="row" spacing={0.75} flexWrap="wrap" alignItems="center" sx={{ px: 1, py: 0.5 }}>
+                <Typography variant="caption" color="text.secondary" fontWeight="bold">{t("variants.totalStock")}:</Typography>
+                {locsWithStock.map((loc) => (
+                  <Chip key={loc.id} label={`${loc.name}: ${agg[loc.id]}`} size="small" variant="outlined" />
+                ))}
+                {locsWithStock.length > 1 && (
+                  <Chip label={`Σ ${total}`} size="small" color={total === 0 ? "error" : "success"} />
+                )}
+              </Stack>
+            ) : null;
+          })()}
+
           {/* Active variants */}
           {activeVariants.length > 0 && (
             <Paper variant="outlined">
