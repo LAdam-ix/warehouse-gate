@@ -541,7 +541,7 @@ export const useAddSaleLine = (saleId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: SaleLineCreate) => post<SaleLine>(`/sales/${saleId}/lines/`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sales", saleId] }),
+    onSuccess: () => qc.refetchQueries({ queryKey: ["sales", saleId] }),
   });
 };
 
@@ -549,7 +549,7 @@ export const useUpdateSaleLine = (saleId: string, lineId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: SaleLineUpdate) => patch<SaleLine>(`/sales/${saleId}/lines/${lineId}/`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sales", saleId] }),
+    onSuccess: () => qc.refetchQueries({ queryKey: ["sales", saleId] }),
   });
 };
 
@@ -557,7 +557,7 @@ export const useDeleteSaleLine = (saleId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (lineId: string) => del(`/sales/${saleId}/lines/${lineId}/`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sales", saleId] }),
+    onSuccess: () => qc.refetchQueries({ queryKey: ["sales", saleId] }),
   });
 };
 
