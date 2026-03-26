@@ -26,8 +26,8 @@ import { useTranslation } from "react-i18next";
 // ─── Cart line row (draft mode — always editable) ─────────────────────────────
 
 const noSpinnerSx = {
-  "& input[type=number]::-webkit-inner-spin-button": { WebkitAppearance: "none" },
-  "& input[type=number]::-webkit-outer-spin-button": { WebkitAppearance: "none" },
+  "& input[type=number]::-webkit-inner-spin-button": { WebkitAppearance: "none", margin: 0 },
+  "& input[type=number]::-webkit-outer-spin-button": { WebkitAppearance: "none", margin: 0 },
   "& input[type=number]": { MozAppearance: "textfield" },
 } as const;
 
