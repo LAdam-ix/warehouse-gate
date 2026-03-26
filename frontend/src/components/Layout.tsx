@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   AppBar,
@@ -32,6 +32,19 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Scroll to top on sidebar navigation (fresh nav), but not on back/forward.
+  // We track whether navigation came from the sidebar by storing the pathname
+  // that was clicked — if it differs from the current, it was a fresh nav.
+  const prevPathname = useRef(location.pathname);
+  const sidebarNav = useRef(false);
+  useEffect(() => {
+    if (sidebarNav.current) {
+      window.scrollTo({ top: 0 });
+      sidebarNav.current = false;
+    }
+    prevPathname.current = location.pathname;
+  }, [location.pathname]);
+
   const NAV_ITEMS = [
     { label: t("nav.dashboard"), path: "/dashboard", icon: <DashboardIcon /> },
     { label: t("nav.catalog"), path: "/catalog", icon: <InventoryIcon /> },
@@ -54,7 +67,7 @@ export default function Layout() {
         {NAV_ITEMS.map((item) => (
           <ListItem key={item.path} disablePadding>
             <ListItemButton
-              {...navLinkProps(item.path, navigate, () => setMobileOpen(false))}
+              {...navLinkProps(item.path, navigate, () => { sidebarNav.current = true; setMobileOpen(false); })}
               selected={location.pathname.startsWith(item.path)}
               sx={{ borderRadius: 1, mx: 0.5 }}
             >
