@@ -58,7 +58,7 @@ class Sale(AuditModel):
         order_discount += self.discount_fixed
 
         discount_total = line_discounts + order_discount
-        total = subtotal - order_discount
+        total = subtotal - discount_total
         cost_total = sum(l.line_cost for l in lines)
         profit = total - cost_total
 
