@@ -159,7 +159,10 @@ export const useUploadProductPhoto = (productId: string) => {
         })
         .then((r) => r.data);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products", productId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products", productId] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+    },
   });
 };
 
@@ -167,7 +170,10 @@ export const useDeleteProductPhoto = (productId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (photoId: string) => del(`/products/${productId}/photos/${photoId}/`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products", productId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products", productId] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+    },
   });
 };
 
@@ -176,7 +182,10 @@ export const useSetPrimaryPhoto = (productId: string) => {
   return useMutation({
     mutationFn: (photoId: string) =>
       axiosInstance.patch(`/products/${productId}/photos/${photoId}/set-primary/`).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products", productId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products", productId] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+    },
   });
 };
 
@@ -185,7 +194,10 @@ export const useReorderPhotos = (productId: string) => {
   return useMutation({
     mutationFn: (order: string[]) =>
       axiosInstance.post(`/products/${productId}/reorder-photos/`, { order }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products", productId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products", productId] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+    },
   });
 };
 
