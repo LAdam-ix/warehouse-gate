@@ -41,6 +41,11 @@ class SaleViewSet(FirmScopedMixin, viewsets.ModelViewSet):
             )
         return super().update(request, *args, **kwargs)
 
+    def perform_update(self, serializer):
+        sale = serializer.save(updated_by=self.get_user())
+        sale.recalculate_totals()
+        sale.save()
+
     @action(detail=True, methods=["post"])
     def finalize(self, request, pk=None):
         sale = self.get_object()

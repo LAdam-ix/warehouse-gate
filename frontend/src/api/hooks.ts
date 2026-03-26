@@ -502,7 +502,7 @@ export const useUpdateSale = (id: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: SaleWrite) => patch<Sale>(`/sales/${id}/`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sales", id] }),
+    onSuccess: () => qc.refetchQueries({ queryKey: ["sales", id] }),
   });
 };
 
