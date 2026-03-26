@@ -8,6 +8,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { useNavigate } from "react-router-dom";
 import { useSales, useCreateSale } from "../../api/hooks";
 import { useTranslation } from "react-i18next";
+import { navLinkProps } from "../../utils/navLink";
 
 const STATUS_COLORS = {
   draft: "warning",
@@ -67,8 +68,8 @@ export default function SalesPage() {
               <TableRow
                 key={sale.id}
                 hover
+                {...navLinkProps(`/sales/${sale.id}`, navigate)}
                 sx={{ cursor: "pointer" }}
-                onClick={() => navigate(`/sales/${sale.id}`)}
               >
                 <TableCell>
                   <Chip

@@ -22,6 +22,7 @@ import BrokenImageIcon from "@mui/icons-material/BrokenImage";
 import PrecisionManufacturingIcon from "@mui/icons-material/PrecisionManufacturing";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { useTranslation } from "react-i18next";
+import { navLinkProps } from "../utils/navLink";
 
 const DRAWER_WIDTH = 220;
 
@@ -53,11 +54,8 @@ export default function Layout() {
         {NAV_ITEMS.map((item) => (
           <ListItem key={item.path} disablePadding>
             <ListItemButton
+              {...navLinkProps(item.path, navigate, () => setMobileOpen(false))}
               selected={location.pathname.startsWith(item.path)}
-              onClick={() => {
-                navigate(item.path);
-                setMobileOpen(false);
-              }}
               sx={{ borderRadius: 1, mx: 0.5 }}
             >
               <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>

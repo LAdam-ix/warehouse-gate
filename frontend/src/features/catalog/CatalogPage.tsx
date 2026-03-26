@@ -30,6 +30,7 @@ const CatalogPrefsContext = createContext({ showSku: false });
 
 import { variantLabel } from "../../utils/variantLabel";
 import { intQtyInputProps } from "../../utils/form";
+import { navLinkProps } from "../../utils/navLink";
 
 // ─── Quick sell dialog ────────────────────────────────────────────────────────
 
@@ -210,8 +211,8 @@ function ProductVariantStock({ productId, productName, isService }: { productId:
             direction="row"
             alignItems="center"
             spacing={1.5}
-            sx={{ px: 2, py: 0.75, cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}
-            onClick={() => navigate(`/catalog/${productId}`)}
+            {...navLinkProps(`/catalog/${productId}`, navigate)}
+            sx={{ px: 2, py: 0.75, cursor: "pointer", "&:hover": { bgcolor: "action.hover" }, textDecoration: "none", color: "inherit" }}
           >
             {/* Photo / swatch */}
             <Box sx={{ width: 28, flexShrink: 0 }}>
@@ -298,11 +299,18 @@ function ProductRow({ product }: { product: Product }) {
       <Stack direction="row" alignItems="stretch" sx={{ minHeight: 68 }}>
         {/* ── Hoverable clickable zone: photo + name + price + stock ── */}
         <Stack
+          component="a"
+          href={`/catalog/${product.id}`}
           direction="row"
           alignItems="center"
           spacing={0}
-          sx={{ flex: 1, cursor: "pointer", "&:hover": { bgcolor: "action.hover" }, minWidth: 0 }}
-          onClick={handleRowClick}
+          sx={{ flex: 1, cursor: "pointer", "&:hover": { bgcolor: "action.hover" }, minWidth: 0, textDecoration: "none", color: "inherit" }}
+          onClick={(e: React.MouseEvent) => {
+            if (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+              e.preventDefault();
+              handleRowClick();
+            }
+          }}
         >
           {/* Photo + name */}
           <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flex: 1, px: 1.5, py: 1, minWidth: 0 }}>
@@ -324,8 +332,7 @@ function ProductRow({ product }: { product: Product }) {
               <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 0.25 }}>
                 <Typography
                   fontWeight="bold" noWrap
-                  sx={{ fontSize: "0.9rem", "&:hover": { textDecoration: "underline" } }}
-                  onClick={(e) => { e.stopPropagation(); navigate(`/catalog/${product.id}`); }}
+                  sx={{ fontSize: "0.9rem" }}
                 >
                   {product.name}
                 </Typography>
@@ -389,7 +396,7 @@ function ProductRow({ product }: { product: Product }) {
               <Tooltip title={t("catalog.openProductPage")}>
                 <IconButton
                   size="small"
-                  onClick={(e) => { e.stopPropagation(); navigate(`/catalog/${product.id}`); }}
+                  {...navLinkProps(`/catalog/${product.id}`, navigate)}
                   sx={{ color: "text.secondary" }}
                 >
                   <OpenInNewIcon sx={{ fontSize: 14 }} />
@@ -635,7 +642,7 @@ export default function CatalogPage() {
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="h5" fontWeight="bold">{t("catalog.title")}</Typography>
         <Stack direction="row" spacing={1} alignItems="center">
-          <Button variant="outlined" size="small" color="success" startIcon={<AddIcon />} onClick={() => navigate("/stock/add")}>
+          <Button variant="outlined" size="small" color="success" startIcon={<AddIcon />} {...navLinkProps("/stock/add", navigate)}>
             {t("catalog.addStock")}
           </Button>
           <Button variant="outlined" size="small" onClick={() => setCatOpen(true)}>{t("catalog.addTag")}</Button>

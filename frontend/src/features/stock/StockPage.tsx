@@ -16,6 +16,7 @@ import { useLocations, useStockMovements, useRevertMovement } from "../../api/ho
 import { useConfirm } from "../../components/ConfirmDialog";
 import type { StockMovement } from "../../types/api";
 import { useTranslation } from "react-i18next";
+import { navLinkProps } from "../../utils/navLink";
 
 const REVERTABLE_TYPES = new Set(["produced", "adjustment", "transfer_out", "transfer_in"]);
 
@@ -196,7 +197,7 @@ export default function StockPage() {
     <Stack spacing={2}>
       <Stack direction="row" alignItems="center" spacing={1}>
         <Typography variant="h5" fontWeight="bold" sx={{ flex: 1 }}>{t("stock.title")}</Typography>
-        <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={() => navigate("/stock/add")}>
+        <Button variant="outlined" size="small" startIcon={<AddIcon />} {...navLinkProps("/stock/add", navigate)}>
           {t("stock.addStock")}
         </Button>
       </Stack>
@@ -212,7 +213,7 @@ export default function StockPage() {
           </Select>
         </FormControl>
         {showLocations && (
-          <Button variant="outlined" size="small" startIcon={<SwapHorizIcon />} onClick={() => navigate("/stock/transfer")}>
+          <Button variant="outlined" size="small" startIcon={<SwapHorizIcon />} {...navLinkProps("/stock/transfer", navigate)}>
             {t("stock.transfer")}
           </Button>
         )}

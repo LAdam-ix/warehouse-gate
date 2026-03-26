@@ -6,6 +6,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { useNavigate } from "react-router-dom";
 import { useDamageReports } from "../../api/hooks";
 import { useTranslation } from "react-i18next";
+import { navLinkProps } from "../../utils/navLink";
 
 export default function WriteOffPage() {
   const { t } = useTranslation();
@@ -28,7 +29,7 @@ export default function WriteOffPage() {
             </Typography>
           )}
         </Box>
-        <Button variant="contained" color="error" startIcon={<AddIcon />} onClick={() => navigate("/writeoffs/new")}>
+        <Button variant="contained" color="error" startIcon={<AddIcon />} {...navLinkProps("/writeoffs/new", navigate)}>
           {t("writeoffs.recordWriteOff")}
         </Button>
       </Stack>

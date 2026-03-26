@@ -10,6 +10,7 @@ import { useDashboard } from "../../api/hooks";
 import { useNavigate } from "react-router-dom";
 import type { DashboardPeriod } from "../../types/api";
 import { useTranslation } from "react-i18next";
+import { navLinkProps } from "../../utils/navLink";
 
 function StatCard({
   title, value, sub, color, small, compact,
@@ -230,8 +231,8 @@ export default function DashboardPage() {
             <Card
               key={s.id}
               variant="outlined"
+              {...navLinkProps(`/sales/${s.id}`, navigate)}
               sx={{ cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}
-              onClick={() => navigate(`/sales/${s.id}`)}
             >
               <CardContent sx={{ py: 1, "&:last-child": { pb: 1 }, display: "flex", alignItems: "center", gap: 2 }}>
                 <Chip
