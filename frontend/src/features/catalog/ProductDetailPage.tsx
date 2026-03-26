@@ -87,6 +87,7 @@ function PhotoDropZone({ onFiles, pending }: { onFiles: (files: File[]) => void;
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         setDragging(false);
         pick(e.dataTransfer.files);
       }}
@@ -1954,13 +1955,14 @@ export default function ProductDetailPage() {
                     setDragPhotoId(null); setDragOverPhotoId(null);
                   }}
                   onDragEnd={() => { setDragPhotoId(null); setDragOverPhotoId(null); }}
-                  sx={{ position: "relative", opacity: dragPhotoId === photo.id ? 0.4 : 1, outline: dragOverPhotoId === photo.id && dragPhotoId !== photo.id ? "2px dashed" : "none", outlineColor: "primary.main", borderRadius: 1.5, cursor: "grab", transition: "opacity 0.15s" }}
+                  onClick={() => { if (!photo.isPrimary) setPrimary.mutate(photo.id); }}
+                  sx={{ position: "relative", opacity: dragPhotoId === photo.id ? 0.4 : 1, outline: dragOverPhotoId === photo.id && dragPhotoId !== photo.id ? "2px dashed" : "none", outlineColor: "primary.main", borderRadius: 1.5, cursor: photo.isPrimary ? "grab" : "pointer", transition: "opacity 0.15s" }}
                 >
                   <Box component="img" src={photo.image} alt=""
                     sx={{ width: 90, height: 90,
                       borderRadius: 1.5, objectFit: "cover", display: "block",
                       border: "1px solid", borderColor: photo.isPrimary ? "#f59e0b" : "divider",
-                      cursor: "grab", userSelect: "none", pointerEvents: "none" }}
+                      cursor: "inherit", userSelect: "none" }}
                   />
                   {photo.isPrimary && (
                     <Box sx={{ position: "absolute", inset: 0, borderRadius: 1.5, border: "5px solid #f59e0b", pointerEvents: "none" }} />
@@ -1972,11 +1974,9 @@ export default function ProductDetailPage() {
                     <DeleteIcon sx={{ fontSize: 16 }} />
                   </IconButton>
                   {!photo.isPrimary && (
-                    <IconButton size="small"
-                      sx={{ position: "absolute", bottom: 4, right: 4, bgcolor: "rgba(0,0,0,0.45)", color: "white", p: 0.25 }}
-                      onClick={() => setPrimary.mutate(photo.id)}>
-                      <StarIcon sx={{ fontSize: 12 }} />
-                    </IconButton>
+                    <Tooltip title={t("productDetail.setAsPrimary")} placement="bottom">
+                      <StarIcon sx={{ position: "absolute", bottom: 4, right: 4, fontSize: 14, color: "rgba(255,255,255,0.7)", pointerEvents: "none" }} />
+                    </Tooltip>
                   )}
                 </Box>
               ))}

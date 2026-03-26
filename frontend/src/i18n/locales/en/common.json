@@ -615,7 +615,8 @@
       "cost": "Cost",
       "production": "Production"
     },
-    "photos": "Photos — click a photo to set as primary",
+    "photos": "Photos — click to set as primary, drag to reorder",
+    "setAsPrimary": "Click to set as primary",
     "basePrice": "Base Price",
     "lowStockThreshold": "Low stock threshold",
     "categories": "Categories",
