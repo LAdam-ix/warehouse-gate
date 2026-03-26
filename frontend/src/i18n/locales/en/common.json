@@ -282,7 +282,8 @@
       "variants": "{{count}} variants",
       "newLocation": "Add new location",
       "locationNamePlaceholder": "Location name…",
-      "batchNotePlaceholder": "Batch #, production run…"
+      "batchNotePlaceholder": "Batch #, production run…",
+      "clearAll": "Clear all"
     },
     "transferDialog": {
       "title": "Transfer Stock",

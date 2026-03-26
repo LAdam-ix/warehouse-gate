@@ -71,13 +71,20 @@ function AddLocationButton({ onCreated }: { onCreated: (id: string) => void }) {
 export default function AddStockPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [cart, setCart] = useState<CartLine[]>([]);
+  const [cart, setCart] = useState<CartLine[]>(() => {
+    try { return JSON.parse(localStorage.getItem("add_stock_draft") ?? "[]"); } catch { return []; }
+  });
   const [defaultLocationId, setDefaultLocationId] = useState("");
   const [note, setNote] = useState("");
   const [movementDate, setMovementDate] = useState(new Date().toISOString().slice(0, 16));
 
   const { data: locations } = useLocations();
   const addStock = useAddStock();
+
+  // Persist cart to localStorage
+  useEffect(() => {
+    localStorage.setItem("add_stock_draft", JSON.stringify(cart));
+  }, [cart]);
 
   // Auto-select default location
   useEffect(() => {
@@ -134,6 +141,7 @@ export default function AddStockPage() {
       note: note || undefined,
       movementDate: new Date(movementDate).toISOString(),
     });
+    localStorage.removeItem("add_stock_draft");
     toast.success(t("stock.addStockPage.stockAdded", { count: cart.length }));
     navigate("/stock");
   };
@@ -165,10 +173,17 @@ export default function AddStockPage() {
         {/* Right — cart */}
         <Grid size={{ xs: 12, md: 5 }}>
           <Paper variant="outlined" sx={{ p: 2, position: "sticky", top: 16 }}>
-            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-              {t("stock.addStockPage.toAdd")}
-              {totalUnits > 0 && <Chip label={t("stock.addStockPage.units", { count: totalUnits })} size="small" color="success" sx={{ ml: 1 }} />}
-            </Typography>
+            <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
+              <Typography variant="subtitle1" fontWeight="bold" sx={{ flex: 1 }}>
+                {t("stock.addStockPage.toAdd")}
+                {totalUnits > 0 && <Chip label={t("stock.addStockPage.units", { count: totalUnits })} size="small" color="success" sx={{ ml: 1 }} />}
+              </Typography>
+              {cart.length > 0 && (
+                <IconButton size="small" onClick={() => setCart([])} title={t("stock.addStockPage.clearAll")}>
+                  <DeleteIcon sx={{ fontSize: 16, color: "text.disabled" }} />
+                </IconButton>
+              )}
+            </Stack>
 
             {cart.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
