@@ -225,6 +225,14 @@
     "noAttributeValues": "This variant has no attribute values assigned.",
     "assignValues": "Assign values →",
     "archivedCount": "Archived ({{count}})",
+    "batchStock": {
+      "button": "Add Stock",
+      "title": "Batch Add Stock",
+      "clear": "Clear all",
+      "submit": "Add {{count}} units to stock",
+      "submitEmpty": "Select variants to add",
+      "added": "Stock added for {{count}} variant(s)"
+    },
     "attributeUpdated": "Attribute updated",
     "attributeCreated": "Attribute created",
     "attributeDeleted": "Attribute deleted",

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { blockNonDecimal } from "../../utils/form";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -34,7 +34,7 @@ import {
   useCreateVariant, useCreateAttribute, useUpdateAttribute, useReorderAttributes, useDeleteAttribute,
   useCreateAttributeValue, useUpdateAttributeValue, useDeleteAttributeValue, useReorderAttributeValues,
   useProductionRequests, useCreateProductionRequest, useFulfillProductionRequest, useCancelProductionRequest,
-  useWarehouseSettings,
+  useWarehouseSettings, useAddStock, useLocations,
 } from "../../api/hooks";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { AddStockDialog } from "../../components/AddStockDialog";
@@ -691,6 +691,50 @@ function VariantManager({
   const [assignValueIds, setAssignValueIds] = useState<Record<string, string>>({});
   const updateVariant = useUpdateVariant(assignDialogVariant?.id ?? "");
 
+  // Batch add stock panel
+  const [batchStockOpen, setBatchStockOpen] = useState(false);
+  const [batchStockCart, setBatchStockCart] = useState<Record<string, number>>({});
+  const [batchStockLocationId, setBatchStockLocationId] = useState("");
+  const [batchStockNote, setBatchStockNote] = useState("");
+  const [batchStockDate, setBatchStockDate] = useState(new Date().toISOString().slice(0, 16));
+  const batchAddStock = useAddStock();
+  const { data: batchLocations } = useLocations();
+
+  useEffect(() => {
+    if (!batchStockLocationId && batchLocations && batchLocations.length > 0) {
+      const def = batchLocations.find((l: { isDefault: boolean }) => l.isDefault) ?? batchLocations[0];
+      setBatchStockLocationId(def.id);
+    }
+  }, [batchLocations, batchStockLocationId]);
+
+  const batchStockAdjust = (variantId: string, delta: number) => {
+    setBatchStockCart((prev) => {
+      const next = { ...prev };
+      const current = next[variantId] ?? 0;
+      const newQty = current + delta;
+      if (newQty <= 0) { delete next[variantId]; } else { next[variantId] = newQty; }
+      return next;
+    });
+  };
+
+  const batchStockSubmit = async () => {
+    const lines = Object.entries(batchStockCart)
+      .filter(([, qty]) => qty > 0)
+      .map(([variantId, quantity]) => ({ variantId, quantity, locationId: batchStockLocationId || undefined }));
+    if (lines.length === 0) return;
+    await batchAddStock.mutateAsync({
+      lines,
+      note: batchStockNote || undefined,
+      movementDate: new Date(batchStockDate).toISOString(),
+    });
+    toast.success(t("variants.batchStock.added", { count: lines.length }));
+    setBatchStockCart({});
+    setBatchStockNote("");
+    setBatchStockOpen(false);
+  };
+
+  const batchStockTotal = Object.values(batchStockCart).reduce((s, n) => s + n, 0);
+
   // Generate all combinations dialog
   const [genOpen, setGenOpen] = useState(false);
   const [genSelected, setGenSelected] = useState<Record<string, Set<string>>>({});
@@ -923,18 +967,26 @@ function VariantManager({
       {/* Variants section */}
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="subtitle2" fontWeight="bold">{t("variants.variants")}</Typography>
-        {attributes.length > 0 && (
-          <Stack direction="row" spacing={1}>
-            {attributes.some((a) => a.values.length > 0) && (
-              <Button size="small" variant="outlined" onClick={openGenDialog}>
-                {t("variants.generateCombinations")}
-              </Button>
-            )}
+        <Stack direction="row" spacing={1}>
+          <Button
+            size="small"
+            variant={batchStockOpen ? "contained" : "outlined"}
+            color="success"
+            onClick={() => setBatchStockOpen((v) => !v)}
+          >
+            {t("variants.batchStock.button")}
+          </Button>
+          {attributes.length > 0 && attributes.some((a) => a.values.length > 0) && (
+            <Button size="small" variant="outlined" onClick={openGenDialog}>
+              {t("variants.generateCombinations")}
+            </Button>
+          )}
+          {attributes.length > 0 && (
             <Button size="small" startIcon={<AddIcon />} onClick={() => setVariantDialogOpen(true)}>
               {t("variants.addVariant")}
             </Button>
-          </Stack>
-        )}
+          )}
+        </Stack>
       </Stack>
 
       {variants.length === 0 ? (
@@ -1029,6 +1081,82 @@ function VariantManager({
             </Stack>
           )}
         </Stack>
+      )}
+
+      {/* ── Batch Add Stock panel ── */}
+      {batchStockOpen && (
+        <Paper variant="outlined" sx={{ p: 2 }}>
+          <Stack direction="row" alignItems="center" sx={{ mb: 1.5 }}>
+            <Typography variant="subtitle2" fontWeight="bold" sx={{ flex: 1 }}>
+              {t("variants.batchStock.title")}
+              {batchStockTotal > 0 && <Chip label={`${batchStockTotal} units`} size="small" color="success" sx={{ ml: 1 }} />}
+            </Typography>
+            {Object.keys(batchStockCart).length > 0 && (
+              <IconButton size="small" onClick={() => setBatchStockCart({})} title={t("variants.batchStock.clear")}>
+                <DeleteIcon sx={{ fontSize: 16, color: "text.disabled" }} />
+              </IconButton>
+            )}
+          </Stack>
+
+          <Stack spacing={0.5} sx={{ mb: 2 }}>
+            {activeVariants.map((v) => {
+              const vLabel = v.isDefault ? productName : (variantLabel(v.attributeValues) || t("common.default"));
+              const qty = batchStockCart[v.id] ?? 0;
+              return (
+                <Stack key={v.id} direction="row" alignItems="center" spacing={0.5}>
+                  <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>{vLabel}</Typography>
+                  <Chip label={`${v.totalStock}`} size="small" variant="outlined" sx={{ height: 18, fontSize: "0.7rem" }} />
+                  {[1, 5].map((n) => (
+                    <Button key={n} size="small" variant="outlined" sx={{ minWidth: 32, px: 0.5, fontSize: "0.7rem" }}
+                      onClick={() => batchStockAdjust(v.id, n)}>
+                      +{n}
+                    </Button>
+                  ))}
+                  {qty > 0 && (
+                    <>
+                      <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 24, textAlign: "center" }}>{qty}</Typography>
+                      <IconButton size="small" onClick={() => batchStockAdjust(v.id, -qty)}>
+                        <CloseIcon sx={{ fontSize: 14 }} />
+                      </IconButton>
+                    </>
+                  )}
+                </Stack>
+              );
+            })}
+          </Stack>
+
+          <Divider sx={{ mb: 1.5 }} />
+
+          <Stack spacing={1.5}>
+            {batchLocations && batchLocations.length > 1 && (
+              <FormControl size="small" fullWidth>
+                <InputLabel>{t("common.location")}</InputLabel>
+                <Select label={t("common.location")} value={batchStockLocationId} onChange={(e) => setBatchStockLocationId(e.target.value)}>
+                  {batchLocations.map((l) => (
+                    <MenuItem key={l.id} value={l.id}>{l.name}{l.isDefault ? " ★" : ""}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+            <TextField
+              label={t("common.date")} type="datetime-local" size="small" fullWidth
+              value={batchStockDate} onChange={(e) => setBatchStockDate(e.target.value)}
+            />
+            <TextField
+              label={t("common.noteOptional")} size="small" fullWidth
+              value={batchStockNote} onChange={(e) => setBatchStockNote(e.target.value)}
+            />
+            <Button
+              variant="contained" color="success" fullWidth
+              disabled={batchStockTotal === 0 || batchAddStock.isPending}
+              onClick={batchStockSubmit}
+            >
+              {batchStockTotal > 0
+                ? t("variants.batchStock.submit", { count: batchStockTotal })
+                : t("variants.batchStock.submitEmpty")}
+            </Button>
+          </Stack>
+        </Paper>
       )}
 
       {/* ── Add/Edit Attribute dialog ── */}
