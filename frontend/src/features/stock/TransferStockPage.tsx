@@ -12,7 +12,7 @@ import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import { toast } from "react-toastify";
 import { useLocations, useBatchTransfer, useStockEntries } from "../../api/hooks";
 import ProductPickerPanel, { type ProductPickerSelectFn } from "../../components/ProductPickerPanel";
-import type { ProductVariant } from "../../types/api";
+import type { ProductVariant, StockEntry } from "../../types/api";
 import { useTranslation } from "react-i18next";
 
 interface CartLine {
@@ -37,12 +37,13 @@ function SourceLocationSelect({
   excludeLocationId: string;
 }) {
   const { t } = useTranslation();
-  const { data: entries = [] } = useStockEntries({ variant: variantId });
-  const withStock = entries.filter((e) => e.quantity > 0 && e.location !== excludeLocationId);
+  const { data: entries, isLoading } = useStockEntries({ variant: variantId });
+  const allEntries = (entries ?? []) as StockEntry[];
+  const withStock = allEntries.filter((e: StockEntry) => e.quantity > 0 && e.location !== excludeLocationId);
 
   // Auto-select first available source if current selection is invalid
   useEffect(() => {
-    if (withStock.length > 0 && !withStock.find((e) => e.location === value)) {
+    if (withStock.length > 0 && !withStock.find((e: StockEntry) => e.location === value)) {
       onChange(withStock[0].location);
     }
   }, [withStock.length]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -55,8 +56,10 @@ function SourceLocationSelect({
       onChange={(e) => onChange(e.target.value)}
       sx={{ fontSize: "0.75rem", minWidth: 100, "& .MuiSelect-select": { py: 0.5 } }}
     >
-      <MenuItem value="" disabled><em>{t("transferStockDialog.fromLocation", "From…")}</em></MenuItem>
-      {withStock.map((e) => (
+      <MenuItem value="" disabled>
+        <em>{isLoading ? t("common.loading", "Loading…") : t("transferStockDialog.fromLocation", "From…")}</em>
+      </MenuItem>
+      {withStock.map((e: StockEntry) => (
         <MenuItem key={e.location} value={e.location} sx={{ fontSize: "0.75rem" }}>
           {e.locationName} ({e.quantity})
         </MenuItem>
@@ -153,7 +156,7 @@ export default function TransferStockPage() {
             queryParams={{ item_type: "physical", is_active: true, has_stock: true }}
             showStock
             hideZeroStock
-            quickAmounts={[1, 5]}
+            quickAmounts={[1, 5, 10]}
             autoFocus
             emptyMessage={t("stock.transferPage.noProducts")}
             noMatchMessage={t("common.noProductsFound")}
