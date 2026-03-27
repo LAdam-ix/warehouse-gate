@@ -21,13 +21,18 @@ export type ProductPickerSelectFn = (
 
 // ─── Expanded variant list (inside a multi-variant product row) ───────────────
 
-export function StockChips({ variant, locations, chipColor }: {
+export function StockChips({ variant, locations, chipColor, onLocationClick }: {
   variant: { totalStock: number; stockByLocation?: Record<string, number>; isLowStock?: boolean };
   locations: { id: string; name: string }[];
   chipColor?: "default" | "error" | "warning" | "success";
+  onLocationClick?: (locationId: string) => void;
 }) {
   const color = chipColor ?? (variant.totalStock === 0 ? "error" : "default");
   const locsWithStock = locations.filter((loc) => (variant.stockByLocation?.[loc.id] ?? 0) > 0);
+  const clickProps = (locId: string) => onLocationClick ? {
+    onClick: (e: React.MouseEvent) => { e.stopPropagation(); onLocationClick(locId); },
+    sx: { cursor: "pointer", "&:hover": { borderColor: "primary.main" } },
+  } : {};
   if (locsWithStock.length === 0 || locsWithStock.length > 5) {
     return (
       <Chip label={`${variant.totalStock}`} size="small" color={color} variant="outlined" />
@@ -36,14 +41,15 @@ export function StockChips({ variant, locations, chipColor }: {
   if (locsWithStock.length === 1) {
     return (
       <Chip label={`${locsWithStock[0].name}: ${variant.stockByLocation![locsWithStock[0].id]}`}
-        size="small" color={color} variant="outlined" />
+        size="small" color={color} variant="outlined" {...clickProps(locsWithStock[0].id)} />
     );
   }
   return (
     <Stack direction="row" spacing={0.25} flexWrap="wrap">
       {locsWithStock.map((loc) => (
         <Chip key={loc.id} label={`${loc.name}: ${variant.stockByLocation![loc.id]}`}
-          size="small" color={color} variant="outlined" sx={{ fontSize: "0.65rem", height: 20 }} />
+          size="small" color={color} variant="outlined" sx={{ fontSize: "0.65rem", height: 20, ...(onLocationClick ? { cursor: "pointer", "&:hover": { borderColor: "primary.main" } } : {}) }}
+          {...(onLocationClick ? { onClick: (e: React.MouseEvent) => { e.stopPropagation(); onLocationClick(loc.id); } } : {})} />
       ))}
     </Stack>
   );
@@ -162,6 +168,7 @@ function ProductRow({
   variantLimit,
   variantSort,
   onSelect,
+  onLocationStockClick,
 }: {
   product: Product;
   showStock: boolean;
@@ -172,6 +179,7 @@ function ProductRow({
   variantLimit?: number;
   variantSort?: "stockAsc";
   onSelect: ProductPickerSelectFn;
+  onLocationStockClick?: (product: Product, locationId: string) => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(
@@ -227,7 +235,7 @@ function ProductRow({
                 aggregated[locId] = (aggregated[locId] ?? 0) + qty;
               }
             }
-            return <StockChips variant={{ totalStock: product.totalStock, stockByLocation: aggregated }} locations={locations} />;
+            return <StockChips variant={{ totalStock: product.totalStock, stockByLocation: aggregated }} locations={locations} onLocationClick={onLocationStockClick ? (locId) => onLocationStockClick(product, locId) : undefined} />;
           }
           return <Chip label={`${product.totalStock}`} size="small" variant="outlined" />;
         })()}
@@ -296,6 +304,8 @@ interface ProductPickerPanelProps {
   emptyMessage?: string;
   /** Message when category filter reduces the list to zero */
   noMatchMessage?: string;
+  /** Called when a location stock chip is clicked (e.g. transfer: add all variants from this location) */
+  onLocationStockClick?: (product: Product, locationId: string) => void;
 }
 
 export default function ProductPickerPanel({
@@ -311,6 +321,7 @@ export default function ProductPickerPanel({
   autoFocus = false,
   emptyMessage,
   noMatchMessage,
+  onLocationStockClick,
 }: ProductPickerPanelProps) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
@@ -392,7 +403,7 @@ export default function ProductPickerPanel({
 
       <Stack spacing={0.75}>
         {products.map((p) => (
-          <ProductRow key={p.id} product={p} showStock={showStock} hideZeroStock={hideZeroStock} quickAmounts={quickAmounts} locations={locations} autoExpandThreshold={autoExpandThreshold} variantLimit={variantLimit} variantSort={variantSort} onSelect={onSelect} />
+          <ProductRow key={p.id} product={p} showStock={showStock} hideZeroStock={hideZeroStock} quickAmounts={quickAmounts} locations={locations} autoExpandThreshold={autoExpandThreshold} variantLimit={variantLimit} variantSort={variantSort} onSelect={onSelect} onLocationStockClick={onLocationStockClick} />
         ))}
       </Stack>
     </Stack>

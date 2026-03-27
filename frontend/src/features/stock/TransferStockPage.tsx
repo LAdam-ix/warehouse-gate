@@ -11,8 +11,10 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import { toast } from "react-toastify";
 import { useLocations, useBatchTransfer, useStockEntries } from "../../api/hooks";
+import { useQueryClient } from "@tanstack/react-query";
 import ProductPickerPanel, { type ProductPickerSelectFn } from "../../components/ProductPickerPanel";
-import type { ProductVariant, StockEntry } from "../../types/api";
+import type { Product, ProductDetail, ProductVariant, StockEntry } from "../../types/api";
+import { variantLabel } from "../../utils/variantLabel";
 import { useTranslation } from "react-i18next";
 
 interface CartLine {
@@ -81,6 +83,7 @@ export default function TransferStockPage() {
 
   const { data: locations } = useLocations();
   const batchTransfer = useBatchTransfer();
+  const qc = useQueryClient();
 
   // Auto-select default destination
   useEffect(() => {
@@ -97,6 +100,28 @@ export default function TransferStockPage() {
         return prev.map((l) => l.variantId === variant.id ? { ...l, quantity: l.quantity + qty } : l);
       }
       return [...prev, { id: crypto.randomUUID(), variantId: variant.id, label, fromLocationId: "", quantity: qty }];
+    });
+  };
+
+  const handleLocationClick = (product: Product, locationId: string) => {
+    // Get cached product detail (already fetched by ProductRow in the picker)
+    const detail = qc.getQueryData<ProductDetail>(["products", product.id]);
+    if (!detail) return;
+    const activeVars = detail.variants.filter((v) => v.isActive);
+    setCart((prev) => {
+      let next = [...prev];
+      for (const v of activeVars) {
+        const stockAtLoc = v.stockByLocation?.[locationId] ?? 0;
+        if (stockAtLoc <= 0) continue;
+        const label = activeVars.length === 1 ? product.name : `${product.name} — ${variantLabel(v.attributeValues) || "Default"}`;
+        const existing = next.find((l) => l.variantId === v.id && l.fromLocationId === locationId);
+        if (existing) {
+          next = next.map((l) => l === existing ? { ...l, quantity: stockAtLoc } : l);
+        } else {
+          next.push({ id: crypto.randomUUID(), variantId: v.id, label, fromLocationId: locationId, quantity: stockAtLoc });
+        }
+      }
+      return next;
     });
   };
 
@@ -155,6 +180,7 @@ export default function TransferStockPage() {
         <Grid size={{ xs: 12, md: 7 }}>
           <ProductPickerPanel
             onSelect={handleAdd}
+            onLocationStockClick={handleLocationClick}
             queryParams={{ item_type: "physical", is_active: true, has_stock: true }}
             showStock
             hideZeroStock
