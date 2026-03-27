@@ -144,6 +144,10 @@ class AttributeValue(AuditModel):
     sort_order = models.PositiveIntegerField(default=0)
     price_delta = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     cost_delta = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    weight_delta = models.DecimalField(
+        max_digits=10, decimal_places=3, default=Decimal("0.000"),
+        help_text="Weight adjustment in grams when this value is selected",
+    )
 
     def __str__(self):
         return f"{self.attribute.name}: {self.value}"
@@ -168,6 +172,13 @@ class ProductVariant(AuditModel):
     sku = models.CharField(max_length=100, blank=True)
     price_delta = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     cost_delta = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    # When set, overrides the auto-calculated price/cost from base + attribute deltas
+    price_override = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cost_override = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    weight = models.DecimalField(
+        max_digits=10, decimal_places=3, null=True, blank=True,
+        help_text="Weight in grams. If null, calculated from product base weight + attribute weight deltas.",
+    )
     photo = models.ImageField(upload_to=variant_photo_upload_path, null=True, blank=True, max_length=500)
     gallery_photo = models.ForeignKey(
         "ProductPhoto",
@@ -189,14 +200,30 @@ class ProductVariant(AuditModel):
 
     @property
     def effective_price(self):
+        if self.price_override is not None:
+            return self.price_override
         return self.product.base_price + self.price_delta
 
     @property
     def effective_cost(self):
+        if self.cost_override is not None:
+            return self.cost_override
         try:
             return self.product.cost.total + self.cost_delta
         except ProductCost.DoesNotExist:
             return Decimal("0.00")
+
+    @property
+    def effective_weight(self):
+        """Weight in grams. Returns explicit weight, or None if not set anywhere."""
+        if self.weight is not None:
+            return self.weight
+        # No base weight on Product yet — just sum attribute weight deltas
+        delta = sum(
+            (av.weight_delta for av in self.attribute_values.all()),
+            Decimal("0.000"),
+        )
+        return delta if delta else None
 
     @property
     def total_stock(self):

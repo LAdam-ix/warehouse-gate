@@ -60,7 +60,7 @@ class AttributeValueSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AttributeValue
-        fields = ["id", "value", "color_hex", "sort_order", "price_delta", "cost_delta", "attribute"]
+        fields = ["id", "value", "color_hex", "sort_order", "price_delta", "cost_delta", "weight_delta", "attribute"]
         read_only_fields = ["id"]
 
 
@@ -85,6 +85,9 @@ class ProductVariantSerializer(serializers.ModelSerializer):
     )
     effective_cost = serializers.DecimalField(
         max_digits=10, decimal_places=2, read_only=True
+    )
+    effective_weight = serializers.DecimalField(
+        max_digits=10, decimal_places=3, read_only=True, allow_null=True
     )
     total_stock = serializers.IntegerField(read_only=True)
     stock_by_location = serializers.SerializerMethodField()
@@ -141,6 +144,9 @@ class ProductVariantSerializer(serializers.ModelSerializer):
             "sku",
             "price_delta",
             "cost_delta",
+            "price_override",
+            "cost_override",
+            "weight",
             "photo",
             "gallery_photo",
             "gallery_photo_url",
@@ -149,6 +155,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
             "is_default",
             "effective_price",
             "effective_cost",
+            "effective_weight",
             "total_stock",
             "stock_by_location",
             "is_low_stock",

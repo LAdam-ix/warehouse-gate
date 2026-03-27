@@ -130,6 +130,7 @@ export interface AttributeValue {
   sortOrder: number;
   priceDelta: string;
   costDelta: string;
+  weightDelta: string;
 }
 
 export type AttributeValueCreate = Omit<AttributeValue, "id"> & { attribute: string };
@@ -155,6 +156,9 @@ export interface ProductVariant {
   sku: string;
   priceDelta: string;
   costDelta: string;
+  priceOverride: string | null;
+  costOverride: string | null;
+  weight: string | null;
   photo: string | null;
   /** FK to a ProductPhoto in the product gallery */
   galleryPhoto: string | null;
@@ -166,6 +170,7 @@ export interface ProductVariant {
   // Computed by backend, read-only
   effectivePrice: string;
   effectiveCost: string;
+  effectiveWeight: string | null;
   totalStock: number;
   stockByLocation?: Record<string, number>;
   isLowStock: boolean;
@@ -175,7 +180,7 @@ export interface ProductVariant {
 
 export type ProductVariantCreate = Omit<
   ProductVariant,
-  ReadonlyFields | "effectivePrice" | "effectiveCost" | "totalStock" | "stockByLocation" | "isLowStock" | "isDefault" | "attributeValues" | "galleryPhotoUrl"
+  ReadonlyFields | "effectivePrice" | "effectiveCost" | "effectiveWeight" | "totalStock" | "stockByLocation" | "isLowStock" | "isDefault" | "attributeValues" | "galleryPhotoUrl"
 > & {
   attributeValueIds?: string[];
 };
