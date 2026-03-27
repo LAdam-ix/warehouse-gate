@@ -713,6 +713,10 @@
   "costFields": {
     "hideCosts": "Hide costs",
     "setCosts": "Set costs",
+    "hide": "Hide cost & weight",
+    "show": "Set cost & weight",
+    "weightSection": "Weight",
+    "baseWeight": "Base weight (g)",
     "material": "Material (€)",
     "other": "Other (€)",
     "energyKwh": "Energy (kWh)",

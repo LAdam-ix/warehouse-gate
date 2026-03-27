@@ -467,6 +467,7 @@ type CreateForm = {
   name: string;
   itemType: string;
   basePrice: string;
+  baseWeight: string | null;
   categories: string[];
   cost: ProductCostWrite | null;
 };
@@ -478,7 +479,7 @@ function CreateProductDialog({ open, onClose }: { open: boolean; onClose: () => 
   const createProduct = useCreateProduct();
   const navigate = useNavigate();
   const [form, setForm] = useState<CreateForm>({
-    name: "", itemType: "physical", basePrice: "0.00", categories: [], cost: null,
+    name: "", itemType: "physical", basePrice: "0.00", baseWeight: null as string | null, categories: [], cost: null,
   });
 
   const handleSubmit = async () => {
@@ -492,11 +493,12 @@ function CreateProductDialog({ open, onClose }: { open: boolean; onClose: () => 
       servicePricing: null,
       hourlyRate: null,
       lowStockThreshold: null,
+      baseWeight: form.baseWeight,
     };
     const result = await createProduct.mutateAsync(
       form.cost ? { ...payload, cost: form.cost } as Parameters<typeof createProduct.mutateAsync>[0] : payload
     );
-    setForm({ name: "", itemType: "physical", basePrice: "0.00", categories: [], cost: null });
+    setForm({ name: "", itemType: "physical", basePrice: "0.00", baseWeight: null, categories: [], cost: null });
     onClose();
     navigate(`/catalog/${result.id}`);
   };
@@ -541,7 +543,7 @@ function CreateProductDialog({ open, onClose }: { open: boolean; onClose: () => 
             </Box>
           )}
 
-          <CostFields cost={form.cost} onChange={(cost) => setForm({ ...form, cost })} defaultEnergyRate={wSettings?.defaultEnergyRate} />
+          <CostFields cost={form.cost} onChange={(cost) => setForm({ ...form, cost })} defaultEnergyRate={wSettings?.defaultEnergyRate} weight={form.baseWeight} onWeightChange={(w) => setForm({ ...form, baseWeight: w })} />
         </Stack>
       </DialogContent>
       <DialogActions>

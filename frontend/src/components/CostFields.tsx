@@ -11,6 +11,8 @@ interface Props {
   onChange: (cost: ProductCostWrite) => void;
   defaultOpen?: boolean;
   defaultEnergyRate?: string | null;
+  weight?: string | null;
+  onWeightChange?: (weight: string | null) => void;
 }
 
 const EMPTY: ProductCostWrite = {
@@ -18,7 +20,7 @@ const EMPTY: ProductCostWrite = {
   laborHours: "", laborRate: "", other: "", notes: "",
 };
 
-export default function CostFields({ cost, onChange, defaultOpen = false, defaultEnergyRate }: Props) {
+export default function CostFields({ cost, onChange, defaultOpen = false, defaultEnergyRate, weight, onWeightChange }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(defaultOpen);
 
@@ -43,7 +45,7 @@ export default function CostFields({ cost, onChange, defaultOpen = false, defaul
         onClick={() => setOpen((v) => !v)}
         sx={{ textTransform: "none", color: "text.secondary", pl: 0 }}
       >
-        {open ? t("costFields.hideCosts") : t("costFields.setCosts")}
+        {open ? t("costFields.hide") : t("costFields.show")}
       </Button>
       <Collapse in={open}>
         <Box sx={{ mt: 1, pl: 1.5, borderLeft: "2px solid", borderColor: "divider" }}>
@@ -86,6 +88,23 @@ export default function CostFields({ cost, onChange, defaultOpen = false, defaul
           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
             {t("costFields.totalFormula")}
           </Typography>
+          {onWeightChange && (
+            <>
+              <Typography variant="caption" color="text.secondary" fontWeight="medium" sx={{ mt: 1.5, mb: 0.5, display: "block" }}>
+                {t("costFields.weightSection")}
+              </Typography>
+              <TextField
+                label={t("costFields.baseWeight")}
+                type="number" fullWidth size="small"
+                value={weight ?? ""}
+                onChange={(e) => onWeightChange(e.target.value || null)}
+                onKeyDown={blockNonDecimal}
+                inputProps={{ step: "0.001", min: 0 }}
+                placeholder="—"
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </>
+          )}
         </Box>
       </Collapse>
     </Box>
