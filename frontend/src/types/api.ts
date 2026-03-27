@@ -65,6 +65,7 @@ export interface Product {
   itemType: "physical" | "service";
   servicePricing: "flat" | "hourly" | null;
   basePrice: string;
+  baseWeight: string | null;
   hourlyRate: string | null;
   lowStockThreshold: number | null;
   isActive: boolean;
@@ -90,8 +91,8 @@ export interface ProductDetail extends Product {
  */
 export type ProductCreate = Omit<
   Product,
-  ReadonlyFields | "categoryNames" | "variantCount" | "totalStock" | "primaryPhoto"
-> & { cost?: ProductCostWrite | null };
+  ReadonlyFields | "categoryNames" | "variantCount" | "totalStock" | "primaryPhoto" | "baseWeight"
+> & { cost?: ProductCostWrite | null; baseWeight?: string | null };
 
 export type ProductUpdate = Partial<ProductCreate>;
 

@@ -39,6 +39,10 @@ class Product(AuditModel):
         max_length=20, choices=ServicePricing.choices, null=True, blank=True
     )
     base_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    base_weight = models.DecimalField(
+        max_digits=10, decimal_places=3, null=True, blank=True,
+        help_text="Base weight in grams. Variants inherit this + attribute weight deltas.",
+    )
     hourly_rate = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True
     )
@@ -202,28 +206,39 @@ class ProductVariant(AuditModel):
     def effective_price(self):
         if self.price_override is not None:
             return self.price_override
-        return self.product.base_price + self.price_delta
+        # Sum attribute value deltas + variant's own delta (manual adjustment)
+        av_delta = sum(
+            (av.price_delta for av in self.attribute_values.all()),
+            Decimal("0.00"),
+        )
+        return self.product.base_price + av_delta + self.price_delta
 
     @property
     def effective_cost(self):
         if self.cost_override is not None:
             return self.cost_override
+        av_delta = sum(
+            (av.cost_delta for av in self.attribute_values.all()),
+            Decimal("0.00"),
+        )
         try:
-            return self.product.cost.total + self.cost_delta
+            base_cost = self.product.cost.total
         except ProductCost.DoesNotExist:
-            return Decimal("0.00")
+            base_cost = Decimal("0.00")
+        return base_cost + av_delta + self.cost_delta
 
     @property
     def effective_weight(self):
         """Weight in grams. Returns explicit weight, or None if not set anywhere."""
         if self.weight is not None:
             return self.weight
-        # No base weight on Product yet — just sum attribute weight deltas
+        base = self.product.base_weight or Decimal("0.000")
         delta = sum(
             (av.weight_delta for av in self.attribute_values.all()),
             Decimal("0.000"),
         )
-        return delta if delta else None
+        total = base + delta
+        return total if total else None
 
     @property
     def total_stock(self):

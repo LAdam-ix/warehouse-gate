@@ -785,14 +785,8 @@ function VariantManager({
         await createVariant.mutateAsync({
           product: productId,
           sku: "",
-          priceDelta: String(ids.reduce((sum, id) => {
-            const v = attributes.flatMap((a) => a.values).find((v) => v.id === id);
-            return sum + parseFloat(v?.priceDelta ?? "0");
-          }, 0)),
-          costDelta: String(ids.reduce((sum, id) => {
-            const v = attributes.flatMap((a) => a.values).find((v) => v.id === id);
-            return sum + parseFloat(v?.costDelta ?? "0");
-          }, 0)),
+          priceDelta: "0",
+          costDelta: "0",
           photo: null,
           galleryPhoto: null,
           lowStockThreshold: null,
@@ -1996,6 +1990,7 @@ export default function ProductDetailPage() {
                   name: product.name,
                   description: product.description,
                   basePrice: product.basePrice,
+                  baseWeight: product.baseWeight,
                   hourlyRate: product.hourlyRate,
                   lowStockThreshold: product.lowStockThreshold,
                   categories: product.categories,
@@ -2028,6 +2023,7 @@ export default function ProductDetailPage() {
                     {overviewForm.itemType === "physical" && (
                       <TextField size="small" fullWidth type="number" label={t("productDetail.editDialog.lowStockThreshold")} value={overviewForm.lowStockThreshold ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, lowStockThreshold: e.target.value !== "" ? Number(e.target.value) : null })} slotProps={{ htmlInput: { min: 0, step: 1 } }} helperText={t("productDetail.editDialog.lowStockHelper")} />
                     )}
+                    <TextField size="small" fullWidth type="number" label={t("productDetail.editDialog.baseWeight")} value={overviewForm.baseWeight ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, baseWeight: e.target.value || null })} onKeyDown={blockNonDecimal} slotProps={{ htmlInput: { step: "0.001", min: 0 }, inputLabel: { shrink: true } }} placeholder="—" helperText={t("productDetail.editDialog.baseWeightHelper")} />
                     <Box>
                       <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
                         {t("productDetail.editDialog.categoriesTags")}
@@ -2094,12 +2090,20 @@ export default function ProductDetailPage() {
                         <Typography variant="body2">{product.description}</Typography>
                       </Box>
                     )}
-                    {product.lowStockThreshold != null && (
+                    {product.itemType === "physical" && (
                       <Stack direction="row" justifyContent="space-between">
                         <Typography variant="caption" color="text.secondary">{t("productDetail.lowStockThreshold")}</Typography>
-                        <Typography variant="body2">{product.lowStockThreshold}</Typography>
+                        <Typography variant="body2" color={product.lowStockThreshold != null ? "text.primary" : "text.disabled"}>
+                          {product.lowStockThreshold != null ? product.lowStockThreshold : t("productDetail.lowStockDisabled")}
+                        </Typography>
                       </Stack>
                     )}
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="caption" color="text.secondary">{t("productDetail.baseWeight")}</Typography>
+                      <Typography variant="body2" color={product.baseWeight ? "text.primary" : "text.disabled"}>
+                        {product.baseWeight ? `${product.baseWeight}g` : "—"}
+                      </Typography>
+                    </Stack>
                     <Box>
                       <Typography variant="caption" color="text.secondary">{t("productDetail.categories")}</Typography>
                       <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
