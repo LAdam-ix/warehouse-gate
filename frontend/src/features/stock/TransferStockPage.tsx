@@ -29,17 +29,17 @@ function SourceLocationSelect({
   variantId,
   value,
   onChange,
-  excludeLocationId,
+  destinationId,
 }: {
   variantId: string;
   value: string;
   onChange: (locationId: string) => void;
-  excludeLocationId: string;
+  destinationId: string;
 }) {
   const { t } = useTranslation();
   const { data: entries, isLoading } = useStockEntries({ variant: variantId });
   const allEntries = (entries ?? []) as StockEntry[];
-  const withStock = allEntries.filter((e: StockEntry) => e.quantity > 0 && e.location !== excludeLocationId);
+  const withStock = allEntries.filter((e: StockEntry) => e.quantity > 0);
 
   // Auto-select first available source if current selection is invalid
   useEffect(() => {
@@ -54,6 +54,7 @@ function SourceLocationSelect({
       displayEmpty
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      error={!!value && value === destinationId}
       sx={{ fontSize: "0.75rem", minWidth: 100, "& .MuiSelect-select": { py: 0.5 } }}
     >
       <MenuItem value="" disabled>
@@ -62,6 +63,7 @@ function SourceLocationSelect({
       {withStock.map((e: StockEntry) => (
         <MenuItem key={e.location} value={e.location} sx={{ fontSize: "0.75rem" }}>
           {e.locationName} ({e.quantity})
+          {e.location === destinationId ? " ⚠" : ""}
         </MenuItem>
       ))}
     </Select>
@@ -209,7 +211,7 @@ export default function TransferStockPage() {
                         variantId={line.variantId}
                         value={line.fromLocationId}
                         onChange={(locId) => updateFrom(line.id, locId)}
-                        excludeLocationId={toLocationId}
+                        destinationId={toLocationId}
                       />
                       <Box sx={{ flex: 1 }} />
                       <IconButton size="small" onClick={() => adjustQty(line.id, -1)}>
