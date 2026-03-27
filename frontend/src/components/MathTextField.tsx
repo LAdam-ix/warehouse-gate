@@ -58,6 +58,7 @@ export default function MathTextField({
 
   return (
     <TextField
+      placeholder={rest.placeholder ?? `0.${"0".repeat(decimals)}`}
       {...rest}
       type="text"
       inputMode="decimal"
