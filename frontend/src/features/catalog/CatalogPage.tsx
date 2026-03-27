@@ -22,6 +22,7 @@ import {
 } from "../../api/hooks";
 import type { Product, ProductVariant, ProductCreate, ProductCostWrite } from "../../types/api";
 import CostFields from "../../components/CostFields";
+import MathTextField from "../../components/MathTextField";
 import { useTranslation } from "react-i18next";
 
 // ─── Catalog display preferences context ──────────────────────────────────────
@@ -523,9 +524,8 @@ function CreateProductDialog({ open, onClose }: { open: boolean; onClose: () => 
               <MenuItem value="service">{t("catalog.newProductDialog.service")}</MenuItem>
             </Select>
           </FormControl>
-          <TextField label={t("catalog.newProductDialog.basePrice")} type="number" fullWidth value={form.basePrice}
-            onChange={(e) => setForm({ ...form, basePrice: e.target.value })}
-            slotProps={{ htmlInput: { min: 0, step: "0.01" } }} />
+          <MathTextField label={t("catalog.newProductDialog.basePrice")} fullWidth size="small" value={form.basePrice}
+            onChange={(v) => setForm({ ...form, basePrice: v })} />
 
           {categories && categories.length > 0 && (
             <Box>

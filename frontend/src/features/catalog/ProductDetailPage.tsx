@@ -45,6 +45,7 @@ import type {
   VariantAttribute, AttributeValue, ProductionRequest,
 } from "../../types/api";
 import CostFields from "../../components/CostFields";
+import MathTextField from "../../components/MathTextField";
 import { useTranslation } from "react-i18next";
 
 // ─── Color presets ────────────────────────────────────────────────────────────
@@ -2022,7 +2023,7 @@ export default function ProductDetailPage() {
                   <Stack spacing={1.5}>
                     <TextField size="small" fullWidth label={t("productDetail.editDialog.name")} value={overviewForm.name ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, name: e.target.value })} />
                     <TextField size="small" fullWidth multiline rows={2} label={t("productDetail.editDialog.description")} value={overviewForm.description ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, description: e.target.value })} />
-                    <TextField size="small" fullWidth type="number" label={t("productDetail.editDialog.basePrice")} value={overviewForm.basePrice ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, basePrice: e.target.value })} onKeyDown={blockNonDecimal} slotProps={{ htmlInput: { step: "0.01" } }} />
+                    <MathTextField size="small" fullWidth label={t("productDetail.editDialog.basePrice")} value={overviewForm.basePrice ?? ""} onChange={(v) => setOverviewForm({ ...overviewForm, basePrice: v })} />
                     {overviewForm.itemType === "service" && (
                       <TextField size="small" fullWidth type="number" label="Hourly rate (€/h)" value={overviewForm.hourlyRate ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, hourlyRate: e.target.value || null })} onKeyDown={blockNonDecimal} slotProps={{ htmlInput: { step: "0.01" } }} />
                     )}
@@ -2038,7 +2039,7 @@ export default function ProductDetailPage() {
                     {overviewForm.itemType === "physical" && (
                       <TextField size="small" fullWidth type="number" label={t("productDetail.editDialog.lowStockThreshold")} value={overviewForm.lowStockThreshold ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, lowStockThreshold: e.target.value !== "" ? Number(e.target.value) : null })} slotProps={{ htmlInput: { min: 0, step: 1 } }} helperText={t("productDetail.editDialog.lowStockHelper")} />
                     )}
-                    <TextField size="small" fullWidth type="number" label={t("productDetail.editDialog.baseWeight")} value={overviewForm.baseWeight ?? ""} onChange={(e) => setOverviewForm({ ...overviewForm, baseWeight: e.target.value || null })} onKeyDown={blockNonDecimal} slotProps={{ htmlInput: { step: "0.001", min: 0 }, inputLabel: { shrink: true } }} placeholder="—" helperText={t("productDetail.editDialog.baseWeightHelper")} />
+                    <MathTextField size="small" fullWidth label={t("productDetail.editDialog.baseWeight")} decimals={3} value={overviewForm.baseWeight ?? ""} onChange={(v) => setOverviewForm({ ...overviewForm, baseWeight: v || null })} placeholder="—" helperText={t("productDetail.editDialog.baseWeightHelper")} />
                     <Box>
                       <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
                         {t("productDetail.editDialog.categoriesTags")}

@@ -3,7 +3,7 @@ import { Box, Button, Collapse, Grid, TextField, Typography } from "@mui/materia
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import type { ProductCostWrite } from "../types/api";
-import { blockNonDecimal } from "../utils/form";
+import MathTextField from "./MathTextField";
 import { useTranslation } from "react-i18next";
 
 interface Props {
@@ -51,34 +51,28 @@ export default function CostFields({ cost, onChange, defaultOpen = false, defaul
         <Box sx={{ mt: 1, pl: 1.5, borderLeft: "2px solid", borderColor: "divider" }}>
           <Grid container spacing={1}>
             <Grid size={{ xs: 6 }}>
-              <TextField label={t("costFields.material")} type="number" fullWidth size="small"
-                value={get("material")} onChange={(e) => set("material", e.target.value)}
-                onKeyDown={blockNonDecimal} inputProps={{ step: "0.01", min: 0 }} />
+              <MathTextField label={t("costFields.material")} fullWidth size="small"
+                value={get("material")} onChange={(v) => set("material", v)} />
             </Grid>
             <Grid size={{ xs: 6 }}>
-              <TextField label={t("costFields.other")} type="number" fullWidth size="small"
-                value={get("other")} onChange={(e) => set("other", e.target.value)}
-                onKeyDown={blockNonDecimal} inputProps={{ step: "0.01", min: 0 }} />
+              <MathTextField label={t("costFields.other")} fullWidth size="small"
+                value={get("other")} onChange={(v) => set("other", v)} />
             </Grid>
             <Grid size={{ xs: 6 }}>
-              <TextField label={t("costFields.energyKwh")} type="number" fullWidth size="small"
-                value={get("energyKwh")} onChange={(e) => set("energyKwh", e.target.value)}
-                onKeyDown={blockNonDecimal} inputProps={{ step: "0.001", min: 0 }} />
+              <MathTextField label={t("costFields.energyKwh")} fullWidth size="small" decimals={3}
+                value={get("energyKwh")} onChange={(v) => set("energyKwh", v)} />
             </Grid>
             <Grid size={{ xs: 6 }}>
-              <TextField label={t("costFields.energyRate")} type="number" fullWidth size="small"
-                value={get("energyRate")} onChange={(e) => set("energyRate", e.target.value)}
-                onKeyDown={blockNonDecimal} inputProps={{ step: "0.0001", min: 0 }} />
+              <MathTextField label={t("costFields.energyRate")} fullWidth size="small" decimals={4}
+                value={get("energyRate")} onChange={(v) => set("energyRate", v)} />
             </Grid>
             <Grid size={{ xs: 6 }}>
-              <TextField label={t("costFields.laborHours")} type="number" fullWidth size="small"
-                value={get("laborHours")} onChange={(e) => set("laborHours", e.target.value)}
-                onKeyDown={blockNonDecimal} inputProps={{ step: "0.25", min: 0 }} />
+              <MathTextField label={t("costFields.laborHours")} fullWidth size="small"
+                value={get("laborHours")} onChange={(v) => set("laborHours", v)} />
             </Grid>
             <Grid size={{ xs: 6 }}>
-              <TextField label={t("costFields.laborRate")} type="number" fullWidth size="small"
-                value={get("laborRate")} onChange={(e) => set("laborRate", e.target.value)}
-                onKeyDown={blockNonDecimal} inputProps={{ step: "0.01", min: 0 }} />
+              <MathTextField label={t("costFields.laborRate")} fullWidth size="small"
+                value={get("laborRate")} onChange={(v) => set("laborRate", v)} />
             </Grid>
             <Grid size={{ xs: 12 }}>
               <TextField label={t("costFields.costNotes")} fullWidth multiline rows={1} size="small"
@@ -93,15 +87,12 @@ export default function CostFields({ cost, onChange, defaultOpen = false, defaul
               <Typography variant="caption" color="text.secondary" fontWeight="medium" sx={{ mt: 1.5, mb: 0.5, display: "block" }}>
                 {t("costFields.weightSection")}
               </Typography>
-              <TextField
+              <MathTextField
                 label={t("costFields.baseWeight")}
-                type="number" fullWidth size="small"
+                fullWidth size="small" decimals={3}
                 value={weight ?? ""}
-                onChange={(e) => onWeightChange(e.target.value || null)}
-                onKeyDown={blockNonDecimal}
-                inputProps={{ step: "0.001", min: 0 }}
+                onChange={(v) => onWeightChange(v || null)}
                 placeholder="—"
-                slotProps={{ inputLabel: { shrink: true } }}
               />
             </>
           )}

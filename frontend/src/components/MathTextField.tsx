@@ -75,6 +75,10 @@ export default function MathTextField({
       }}
       slotProps={{
         ...slotProps,
+        inputLabel: {
+          shrink: true,
+          ...((slotProps as { inputLabel?: Record<string, unknown> })?.inputLabel ?? {}),
+        },
         input: {
           ...((slotProps as { input?: Record<string, unknown> })?.input ?? {}),
           ...(hasExpr ? {
