@@ -63,15 +63,59 @@ export const intQtyInputProps = {
 
 /**
  * onKeyDown handler for decimal number fields (prices, rates, costs).
- * Blocks 'e', 'E', '+' which browsers allow in type="number" inputs.
- * Allows digits, minus, dot, comma, and control keys.
+ * Blocks 'e', 'E' which browsers allow in type="number" inputs.
+ * Allows digits, minus, plus, dot, comma, parentheses, *, / for inline math.
  *
  * @example
  * <TextField type="number" onKeyDown={blockNonDecimal} />
  */
 export const blockNonDecimal = (e: React.KeyboardEvent<HTMLInputElement>) => {
-  if (['e', 'E', '+'].includes(e.key)) e.preventDefault();
+  if (['e', 'E'].includes(e.key)) e.preventDefault();
 };
+
+/**
+ * Evaluate a simple math expression (+-/*() with numbers).
+ * Returns the result rounded to `decimals` places, or null if invalid.
+ * Only allows digits, operators, parentheses, dots, and spaces — no code injection.
+ */
+export function evalMath(expr: string, decimals = 2): number | null {
+  const cleaned = expr.replace(/,/g, ".").trim();
+  if (!cleaned || /^-?\d*\.?\d*$/.test(cleaned)) return null; // plain number, nothing to eval
+  if (!/^[\d\s+\-*/.()]+$/.test(cleaned)) return null; // reject anything suspicious
+  try {
+    const result = new Function(`"use strict"; return (${cleaned});`)();
+    if (typeof result !== "number" || !isFinite(result)) return null;
+    return Math.round(result * 10 ** decimals) / 10 ** decimals;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * onKeyDown handler that evaluates inline math on Enter.
+ * Attach to price/cost TextFields alongside onChange.
+ *
+ * @example
+ * <TextField
+ *   value={price}
+ *   onChange={(e) => setPrice(e.target.value)}
+ *   onKeyDown={mathKeyDown((result) => setPrice(String(result)))}
+ * />
+ */
+export function mathKeyDown(onResult: (value: number) => void, decimals = 2) {
+  return (e: React.KeyboardEvent<HTMLInputElement>) => {
+    blockNonDecimal(e);
+    if (e.key === "Enter") {
+      const input = e.currentTarget.querySelector?.("input") as HTMLInputElement | null;
+      const val = input?.value ?? (e.target as HTMLInputElement).value;
+      const result = evalMath(val, decimals);
+      if (result !== null) {
+        e.preventDefault();
+        onResult(result);
+      }
+    }
+  };
+}
 
 /**
  * Strip keys from an object before sending to the API.
