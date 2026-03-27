@@ -2105,6 +2105,12 @@ export default function ProductDetailPage() {
                         <Typography variant="body2">{product.description}</Typography>
                       </Box>
                     )}
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="caption" color="text.secondary">{t("productDetail.baseWeight")}</Typography>
+                      <Typography variant="body2" color={product.baseWeight ? "text.primary" : "text.disabled"}>
+                        {product.baseWeight ? `${product.baseWeight}g` : "—"}
+                      </Typography>
+                    </Stack>
                     {product.itemType === "physical" && (
                       <Stack direction="row" justifyContent="space-between">
                         <Typography variant="caption" color="text.secondary">{t("productDetail.lowStockThreshold")}</Typography>
@@ -2113,12 +2119,6 @@ export default function ProductDetailPage() {
                         </Typography>
                       </Stack>
                     )}
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography variant="caption" color="text.secondary">{t("productDetail.baseWeight")}</Typography>
-                      <Typography variant="body2" color={product.baseWeight ? "text.primary" : "text.disabled"}>
-                        {product.baseWeight ? `${product.baseWeight}g` : "—"}
-                      </Typography>
-                    </Stack>
                     <Box>
                       <Typography variant="caption" color="text.secondary">{t("productDetail.categories")}</Typography>
                       <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
