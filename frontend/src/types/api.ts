@@ -180,9 +180,12 @@ export interface ProductVariant {
 
 export type ProductVariantCreate = Omit<
   ProductVariant,
-  ReadonlyFields | "effectivePrice" | "effectiveCost" | "effectiveWeight" | "totalStock" | "stockByLocation" | "isLowStock" | "isDefault" | "attributeValues" | "galleryPhotoUrl"
+  ReadonlyFields | "effectivePrice" | "effectiveCost" | "effectiveWeight" | "totalStock" | "stockByLocation" | "isLowStock" | "isDefault" | "attributeValues" | "galleryPhotoUrl" | "priceOverride" | "costOverride" | "weight"
 > & {
   attributeValueIds?: string[];
+  priceOverride?: string | null;
+  costOverride?: string | null;
+  weight?: string | null;
 };
 
 export type ProductVariantUpdate = Partial<ProductVariantCreate>;

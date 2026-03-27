@@ -220,6 +220,8 @@ function VariantRow({
   isOnlyVariant,
   attributes,
   productLowStockThreshold,
+  basePrice,
+  baseCost,
 }: {
   variant: ProductVariant & { stockByLocation?: Record<string, number> };
   locations: Array<{ id: string; name: string }>;
@@ -228,12 +230,17 @@ function VariantRow({
   isOnlyVariant: boolean;
   attributes: VariantAttribute[];
   productLowStockThreshold: number | null;
+  basePrice: string;
+  baseCost: string;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [editSku, setEditSku] = useState("");
   const [editPriceDelta, setEditPriceDelta] = useState("");
   const [editCostDelta, setEditCostDelta] = useState("");
+  const [editWeight, setEditWeight] = useState("");
   const [editLowStockThreshold, setEditLowStockThreshold] = useState("");
+  const [priceMode, setPriceMode] = useState<"absolute" | "delta">("absolute");
+  const [costMode, setCostMode] = useState<"absolute" | "delta">("absolute");
   const [editValueIds, setEditValueIds] = useState<Record<string, string>>({});
   const { t } = useTranslation();
   const [addStockOpen, setAddStockOpen] = useState(false);
@@ -254,11 +261,16 @@ function VariantRow({
 
   const deltaNum = parseFloat(variant.priceDelta);
   const deltaLabel = deltaNum > 0 ? `+€${deltaNum.toFixed(2)}` : deltaNum < 0 ? `-€${Math.abs(deltaNum).toFixed(2)}` : null;
+  const hasOverride = variant.priceOverride !== null;
 
   const openEdit = () => {
     setEditSku(variant.sku);
-    setEditPriceDelta(variant.priceDelta === "0.00" ? "" : variant.priceDelta);
-    setEditCostDelta(variant.costDelta === "0.00" ? "" : variant.costDelta);
+    // Default to absolute mode showing effective price/cost
+    setPriceMode("absolute");
+    setCostMode("absolute");
+    setEditPriceDelta(variant.effectivePrice === "0.00" ? "" : variant.effectivePrice);
+    setEditCostDelta(variant.effectiveCost === "0.00" ? "" : variant.effectiveCost);
+    setEditWeight(variant.weight ?? (variant.effectiveWeight || ""));
     setEditLowStockThreshold(variant.lowStockThreshold != null ? String(variant.lowStockThreshold) : "");
     // Pre-fill attribute value selects from current variant values
     const ids: Record<string, string> = {};
@@ -327,11 +339,14 @@ function VariantRow({
 
         {/* Price */}
         <Stack alignItems="flex-end" sx={{ width: 80, flexShrink: 0 }}>
-          <Typography variant="body2">€{variant.effectivePrice}</Typography>
-          {deltaLabel && (
+          <Typography variant="body2" sx={{ fontStyle: hasOverride ? "italic" : undefined }}>€{variant.effectivePrice}</Typography>
+          {deltaLabel && !hasOverride && (
             <Chip label={deltaLabel} size="small"
               color={deltaNum > 0 ? "warning" : "success"}
               sx={{ height: 14, fontSize: "0.55rem" }} />
+          )}
+          {hasOverride && (
+            <Typography variant="caption" color="text.disabled" sx={{ fontSize: "0.55rem" }}>manual</Typography>
           )}
         </Stack>
 
@@ -420,27 +435,77 @@ function VariantRow({
               value={editSku}
               onChange={(e) => setEditSku(e.target.value)}
             />
+            <Stack direction="row" spacing={1} alignItems="flex-start">
+              <TextField
+                label={priceMode === "absolute" ? t("variants.editVariantDialog.price") : t("variants.editVariantDialog.priceDelta")}
+                type="number"
+                size="small"
+                fullWidth
+                value={editPriceDelta}
+                onChange={(e) => setEditPriceDelta(e.target.value)}
+                onKeyDown={blockNonDecimal}
+                slotProps={{ htmlInput: { step: "0.01" } }}
+                helperText={priceMode === "absolute"
+                  ? t("variants.editVariantDialog.priceAbsoluteHelper", { base: basePrice })
+                  : t("variants.editVariantDialog.priceDeltaHelper")}
+              />
+              <Tooltip title={priceMode === "absolute" ? t("variants.editVariantDialog.switchToDelta") : t("variants.editVariantDialog.switchToAbsolute")}>
+                <IconButton size="small" sx={{ mt: 1 }} onClick={() => {
+                  const val = parseFloat(editPriceDelta || "0");
+                  const base = parseFloat(basePrice);
+                  if (priceMode === "absolute") {
+                    setEditPriceDelta(val === 0 ? "" : String(val - base));
+                    setPriceMode("delta");
+                  } else {
+                    setEditPriceDelta(String(base + val));
+                    setPriceMode("absolute");
+                  }
+                }}>
+                  <SwapHorizIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+            <Stack direction="row" spacing={1} alignItems="flex-start">
+              <TextField
+                label={costMode === "absolute" ? t("variants.editVariantDialog.cost") : t("variants.editVariantDialog.costDelta")}
+                type="number"
+                size="small"
+                fullWidth
+                value={editCostDelta}
+                onChange={(e) => setEditCostDelta(e.target.value)}
+                onKeyDown={blockNonDecimal}
+                slotProps={{ htmlInput: { step: "0.01" } }}
+                helperText={costMode === "absolute"
+                  ? t("variants.editVariantDialog.costAbsoluteHelper", { base: baseCost })
+                  : t("variants.editVariantDialog.costDeltaHelper")}
+              />
+              <Tooltip title={costMode === "absolute" ? t("variants.editVariantDialog.switchToDelta") : t("variants.editVariantDialog.switchToAbsolute")}>
+                <IconButton size="small" sx={{ mt: 1 }} onClick={() => {
+                  const val = parseFloat(editCostDelta || "0");
+                  const base = parseFloat(baseCost);
+                  if (costMode === "absolute") {
+                    setEditCostDelta(val === 0 ? "" : String(val - base));
+                    setCostMode("delta");
+                  } else {
+                    setEditCostDelta(String(base + val));
+                    setCostMode("absolute");
+                  }
+                }}>
+                  <SwapHorizIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
             <TextField
-              label={t("variants.editVariantDialog.priceDelta")}
+              label={t("variants.editVariantDialog.weight")}
               type="number"
               size="small"
               fullWidth
-              value={editPriceDelta}
-              onChange={(e) => setEditPriceDelta(e.target.value)}
+              value={editWeight}
+              onChange={(e) => setEditWeight(e.target.value)}
               onKeyDown={blockNonDecimal}
-              slotProps={{ htmlInput: { step: "0.01" } }}
-              helperText={t("variants.editVariantDialog.priceDeltaHelper")}
-            />
-            <TextField
-              label={t("variants.editVariantDialog.costDelta")}
-              type="number"
-              size="small"
-              fullWidth
-              value={editCostDelta}
-              onChange={(e) => setEditCostDelta(e.target.value)}
-              onKeyDown={blockNonDecimal}
-              slotProps={{ htmlInput: { step: "0.01" } }}
-              helperText={t("variants.editVariantDialog.costDeltaHelper")}
+              slotProps={{ htmlInput: { step: "0.001", min: 0 }, inputLabel: { shrink: true } }}
+              placeholder="—"
+              helperText={t("variants.editVariantDialog.weightHelper")}
             />
             <TextField
               label={t("variants.editVariantDialog.lowStockThreshold")}
@@ -492,10 +557,38 @@ function VariantRow({
         <DialogActions>
           <Button onClick={() => setEditOpen(false)}>{t("common.cancel")}</Button>
           <Button variant="contained" disabled={update.isPending} onClick={async () => {
+            const base = parseFloat(basePrice);
+            const baseCostNum = parseFloat(baseCost);
+            const priceVal = parseFloat(editPriceDelta || "0");
+            const costVal = parseFloat(editCostDelta || "0");
+
+            // In absolute mode: compute delta, set override if it differs from base+delta
+            let priceDelta: string;
+            let priceOverride: string | null = null;
+            if (priceMode === "absolute") {
+              priceDelta = String(priceVal - base);
+              // Set override if the absolute price doesn't match what attribute deltas would give
+              priceOverride = String(priceVal);
+            } else {
+              priceDelta = editPriceDelta || "0";
+            }
+
+            let costDelta: string;
+            let costOverride: string | null = null;
+            if (costMode === "absolute") {
+              costDelta = String(costVal - baseCostNum);
+              costOverride = String(costVal);
+            } else {
+              costDelta = editCostDelta || "0";
+            }
+
             await update.mutateAsync({
               sku: editSku,
-              priceDelta: editPriceDelta || "0",
-              costDelta: editCostDelta || "0",
+              priceDelta,
+              costDelta,
+              priceOverride,
+              costOverride,
+              weight: editWeight ? editWeight : null,
               lowStockThreshold: editLowStockThreshold !== "" ? Number(editLowStockThreshold) : null,
               attributeValueIds: Object.values(editValueIds).filter(Boolean),
             });
@@ -536,6 +629,8 @@ function VariantManager({
   photos,
   productName,
   productLowStockThreshold,
+  basePrice,
+  baseCost,
 }: {
   productId: string;
   attributes: VariantAttribute[];
@@ -544,6 +639,8 @@ function VariantManager({
   photos: ProductDetail["photos"];
   productName: string;
   productLowStockThreshold: number | null;
+  basePrice: string;
+  baseCost: string;
 }) {
   const { t } = useTranslation();
   const createAttr = useCreateAttribute();
@@ -580,6 +677,7 @@ function VariantManager({
   const [valueColor, setValueColor] = useState("");
   const [valuePriceDelta, setValuePriceDelta] = useState("");
   const [valueCostDelta, setValueCostDelta] = useState("");
+  const [valueWeightDelta, setValueWeightDelta] = useState("");
   const updateAttrValue = useUpdateAttributeValue(valueDialog.editing?.id ?? "");
 
   // New variant dialog
@@ -685,13 +783,13 @@ function VariantManager({
   };
 
   const openNewValue = (attr: VariantAttribute) => { setValueDialog({ attr, editing: null }); setValueName(""); setValueColor(""); setValuePriceDelta(""); setValueCostDelta(""); };
-  const openEditValue = (attr: VariantAttribute, v: AttributeValue) => { setValueDialog({ attr, editing: v }); setValueName(v.value); setValueColor(v.colorHex ?? ""); setValuePriceDelta(parseFloat(v.priceDelta) !== 0 ? v.priceDelta : ""); setValueCostDelta(parseFloat(v.costDelta) !== 0 ? v.costDelta : ""); };
+  const openEditValue = (attr: VariantAttribute, v: AttributeValue) => { setValueDialog({ attr, editing: v }); setValueName(v.value); setValueColor(v.colorHex ?? ""); setValuePriceDelta(parseFloat(v.priceDelta) !== 0 ? v.priceDelta : ""); setValueCostDelta(parseFloat(v.costDelta) !== 0 ? v.costDelta : ""); setValueWeightDelta(parseFloat(v.weightDelta) !== 0 ? v.weightDelta : ""); };
 
   const handleSaveValue = async () => {
     const { attr, editing } = valueDialog;
     if (!attr) return;
     const isColor = attr.attributeType === "color";
-    const deltas = { priceDelta: valuePriceDelta || "0", costDelta: valueCostDelta || "0" };
+    const deltas = { priceDelta: valuePriceDelta || "0", costDelta: valueCostDelta || "0", weightDelta: valueWeightDelta || "0" };
     if (editing) {
       await updateAttrValue.mutateAsync({ value: valueName, colorHex: isColor ? (valueColor || null) : null, ...deltas });
       toast.success(t("variants.valueUpdated"));
@@ -881,6 +979,8 @@ function VariantManager({
                       isOnlyVariant={activeVariants.length === 1}
                       attributes={attributes}
                       productLowStockThreshold={productLowStockThreshold}
+                      basePrice={basePrice}
+                      baseCost={baseCost}
                     />
                     {v.isDefault && v.attributeValues.length === 0 && attributes.length > 0 && (
                       <Box sx={{ px: 2, pb: 1 }}>
@@ -920,6 +1020,8 @@ function VariantManager({
                       isOnlyVariant={false}
                       attributes={attributes}
                       productLowStockThreshold={productLowStockThreshold}
+                      basePrice={basePrice}
+                      baseCost={baseCost}
                     />
                   ))}
                 </Stack>
@@ -1046,6 +1148,15 @@ function VariantManager({
                 helperText="Added to variant cost"
               />
             </Stack>
+            <TextField
+              label="Weight delta (g)" size="small" type="number" fullWidth
+              value={valueWeightDelta}
+              onChange={(e) => setValueWeightDelta(e.target.value)}
+              onKeyDown={blockNonDecimal}
+              placeholder="0"
+              slotProps={{ htmlInput: { step: "0.001" } }}
+              helperText="Added to variant weight"
+            />
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -2003,6 +2114,8 @@ export default function ProductDetailPage() {
                     isOnlyVariant={variantsWithStock.filter((x) => x.isActive).length === 1}
                     attributes={product.attributes}
                     productLowStockThreshold={product.lowStockThreshold}
+                    basePrice={product.basePrice}
+                    baseCost={product.cost?.total ?? "0.00"}
                   />
                 ))}
               </Stack>
@@ -2021,6 +2134,8 @@ export default function ProductDetailPage() {
           photos={product.photos}
           productName={product.name}
           productLowStockThreshold={product.lowStockThreshold}
+          basePrice={product.basePrice}
+          baseCost={product.cost?.total ?? "0.00"}
         />
       )}
 
