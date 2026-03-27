@@ -1006,20 +1006,35 @@ function VariantManager({
                 <Stack key={v.id} direction="row" alignItems="center" spacing={0.5}>
                   <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>{vLabel}</Typography>
                   <Chip label={`${v.totalStock}`} size="small" variant="outlined" sx={{ height: 18, fontSize: "0.7rem" }} />
+                  <TextField
+                    size="small"
+                    type="number"
+                    value={qty || ""}
+                    placeholder="0"
+                    onChange={(e) => {
+                      const val = Math.max(0, Math.round(Number(e.target.value) || 0));
+                      setBatchStockCart((prev) => {
+                        const next = { ...prev };
+                        if (val <= 0) { delete next[v.id]; } else { next[v.id] = val; }
+                        return next;
+                      });
+                    }}
+                    slotProps={{ htmlInput: { min: 0, step: 1, style: { textAlign: "center", padding: "2px 0" } } }}
+                    sx={{ width: 48, flexShrink: 0, "& .MuiOutlinedInput-root": { height: 26 }, "& input[type=number]::-webkit-inner-spin-button": { WebkitAppearance: "none", margin: 0 }, "& input[type=number]::-webkit-outer-spin-button": { WebkitAppearance: "none", margin: 0 }, "& input[type=number]": { MozAppearance: "textfield" } }}
+                  />
+                  {[10, 5, 1].map((n) => (
+                    <Button key={-n} size="small" variant="outlined" color="error" disabled={qty < n}
+                      sx={{ minWidth: 32, px: 0.5, fontSize: "0.7rem" }}
+                      onClick={() => batchStockAdjust(v.id, -n)}>
+                      -{n}
+                    </Button>
+                  ))}
                   {[1, 5, 10].map((n) => (
                     <Button key={n} size="small" variant="outlined" sx={{ minWidth: 32, px: 0.5, fontSize: "0.7rem" }}
                       onClick={() => batchStockAdjust(v.id, n)}>
                       +{n}
                     </Button>
                   ))}
-                  {qty > 0 && (
-                    <>
-                      <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 24, textAlign: "center" }}>{qty}</Typography>
-                      <IconButton size="small" onClick={() => batchStockAdjust(v.id, -qty)}>
-                        <CloseIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
-                    </>
-                  )}
                 </Stack>
               );
             })}
