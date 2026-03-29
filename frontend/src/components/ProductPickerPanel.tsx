@@ -179,7 +179,7 @@ function ProductRow({
   variantLimit?: number;
   variantSort?: "stockAsc";
   onSelect: ProductPickerSelectFn;
-  onLocationStockClick?: (product: Product, locationId: string) => void;
+  onLocationStockClick?: (product: Product, locationId: string, variants: ProductVariant[]) => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(
@@ -235,7 +235,7 @@ function ProductRow({
                 aggregated[locId] = (aggregated[locId] ?? 0) + qty;
               }
             }
-            return <StockChips variant={{ totalStock: product.totalStock, stockByLocation: aggregated }} locations={locations} onLocationClick={onLocationStockClick ? (locId) => onLocationStockClick(product, locId) : undefined} />;
+            return <StockChips variant={{ totalStock: product.totalStock, stockByLocation: aggregated }} locations={locations} onLocationClick={onLocationStockClick ? (locId) => onLocationStockClick(product, locId, activeVars) : undefined} />;
           }
           return <Chip label={`${product.totalStock}`} size="small" variant="outlined" />;
         })()}
@@ -305,7 +305,7 @@ interface ProductPickerPanelProps {
   /** Message when category filter reduces the list to zero */
   noMatchMessage?: string;
   /** Called when a location stock chip is clicked (e.g. transfer: add all variants from this location) */
-  onLocationStockClick?: (product: Product, locationId: string) => void;
+  onLocationStockClick?: (product: Product, locationId: string, variants: ProductVariant[]) => void;
 }
 
 export default function ProductPickerPanel({

@@ -11,9 +11,8 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import { toast } from "react-toastify";
 import { useLocations, useBatchTransfer, useStockEntries } from "../../api/hooks";
-import { useQueryClient } from "@tanstack/react-query";
 import ProductPickerPanel, { type ProductPickerSelectFn } from "../../components/ProductPickerPanel";
-import type { Product, ProductDetail, ProductVariant, StockEntry } from "../../types/api";
+import type { Product, ProductVariant, StockEntry } from "../../types/api";
 import { variantLabel } from "../../utils/variantLabel";
 import { useTranslation } from "react-i18next";
 
@@ -83,7 +82,6 @@ export default function TransferStockPage() {
 
   const { data: locations } = useLocations();
   const batchTransfer = useBatchTransfer();
-  const qc = useQueryClient();
 
   // Auto-select default destination
   useEffect(() => {
@@ -103,17 +101,13 @@ export default function TransferStockPage() {
     });
   };
 
-  const handleLocationClick = (product: Product, locationId: string) => {
-    // Get cached product detail (already fetched by ProductRow in the picker)
-    const detail = qc.getQueryData<ProductDetail>(["products", product.id]);
-    if (!detail) return;
-    const activeVars = detail.variants.filter((v) => v.isActive);
+  const handleLocationClick = (_product: Product, locationId: string, variants: ProductVariant[]) => {
     setCart((prev) => {
       let next = [...prev];
-      for (const v of activeVars) {
+      for (const v of variants) {
         const stockAtLoc = v.stockByLocation?.[locationId] ?? 0;
         if (stockAtLoc <= 0) continue;
-        const label = activeVars.length === 1 ? product.name : `${product.name} — ${variantLabel(v.attributeValues) || "Default"}`;
+        const label = variants.length === 1 ? _product.name : `${_product.name} — ${variantLabel(v.attributeValues) || "Default"}`;
         const existing = next.find((l) => l.variantId === v.id && l.fromLocationId === locationId);
         if (existing) {
           next = next.map((l) => l === existing ? { ...l, quantity: stockAtLoc } : l);
