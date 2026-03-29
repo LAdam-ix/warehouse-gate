@@ -188,10 +188,17 @@ export default function TransferStockPage() {
         {/* Right — transfer cart */}
         <Grid size={{ xs: 12, md: 5 }}>
           <Paper variant="outlined" sx={{ p: 2, position: "sticky", top: 16 }}>
-            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-              {t("stock.transferPage.toTransfer")}
-              {totalUnits > 0 && <Chip label={`${totalUnits}`} size="small" color="primary" sx={{ ml: 1 }} />}
-            </Typography>
+            <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
+              <Typography variant="subtitle1" fontWeight="bold" sx={{ flex: 1 }}>
+                {t("stock.transferPage.toTransfer")}
+                {totalUnits > 0 && <Chip label={`${totalUnits}`} size="small" color="primary" sx={{ ml: 1 }} />}
+              </Typography>
+              {cart.length > 0 && (
+                <IconButton size="small" onClick={() => setCart([])} title={t("common.clearAll")}>
+                  <DeleteIcon sx={{ fontSize: 16, color: "text.disabled" }} />
+                </IconButton>
+              )}
+            </Stack>
 
             {/* Destination location */}
             {locations && locations.length > 0 && (
