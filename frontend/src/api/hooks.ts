@@ -111,6 +111,7 @@ export const useProduct = (id: string) =>
     queryKey: ["products", id],
     queryFn: () => get<ProductDetail>(`/products/${id}/`),
     enabled: !!id,
+    staleTime: 30_000,
   });
 
 export const useProductTree = (id: string) =>
@@ -384,12 +385,14 @@ export const useStockEntries = (params?: Record<string, unknown>, options: { ena
     queryFn: () =>
       get<PaginatedResponse<StockEntry>>("/stock-entries/", params).then((r) => r.results),
     enabled: options.enabled ?? true,
+    staleTime: 30_000,
   });
 
 export const useStockMovements = (params?: Record<string, unknown>) =>
   useQuery({
     queryKey: ["stock-movements", params],
     queryFn: () => get<PaginatedResponse<StockMovement>>("/stock-movements/", params),
+    staleTime: 30_000,
   });
 
 export const useAddStock = () => {
@@ -464,12 +467,14 @@ export const useSales = (params?: Record<string, unknown>) =>
   useQuery({
     queryKey: ["sales", params],
     queryFn: () => get<PaginatedResponse<Sale>>("/sales/", params),
+    staleTime: 30_000,
   });
 
 export const useSale = (id: string) =>
   useQuery({
     queryKey: ["sales", id],
     queryFn: () => get<Sale>(`/sales/${id}/`),
+    staleTime: 30_000,
     enabled: !!id,
   });
 
