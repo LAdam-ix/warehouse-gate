@@ -1896,10 +1896,10 @@ export default function ProductDetailPage() {
   const treeData = tree ? (tree as TreeData) : null;
   const locationsForVariants = treeData?.locations ?? [];
 
-  const variantsWithStock = product.variants.map((v) => {
+  const variantsWithStock = sortVariants(product.variants.map((v) => {
     const treeVariant = treeData?.variants.find((tv) => tv.variant.id === v.id);
     return { ...v, stockByLocation: treeVariant?.stockByLocation ?? {} };
-  });
+  }));
 
   const handleOverviewSave = async () => {
     await update.mutateAsync(overviewForm);

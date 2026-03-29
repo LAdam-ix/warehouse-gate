@@ -29,7 +29,7 @@ import { useTranslation } from "react-i18next";
 
 const CatalogPrefsContext = createContext({ showSku: false });
 
-import { variantLabel } from "../../utils/variantLabel";
+import { variantLabel, sortVariants } from "../../utils/variantLabel";
 import { intQtyInputProps } from "../../utils/form";
 import { navLinkProps } from "../../utils/navLink";
 
@@ -188,7 +188,7 @@ function ProductVariantStock({ productId, productName, isService }: { productId:
   if (isLoading) return <Box sx={{ p: 1.5 }}><CircularProgress size={16} /></Box>;
   if (!detail) return null;
 
-  const activeVariants = detail.variants.filter((v) => v.isActive);
+  const activeVariants = sortVariants(detail.variants.filter((v) => v.isActive));
   const isMulti = activeVariants.length > 1 || !activeVariants[0]?.isDefault;
   const visible = showAll || activeVariants.length <= CATALOG_VARIANT_LIMIT
     ? activeVariants
