@@ -51,6 +51,9 @@ export function StockChips({ variant, locations, chipColor, onLocationClick }: {
           size="small" color={color} variant="outlined" sx={{ fontSize: "0.65rem", height: 20, ...(onLocationClick ? { cursor: "pointer", "&:hover": { borderColor: "primary.main" } } : {}) }}
           {...(onLocationClick ? { onClick: (e: React.MouseEvent) => { e.stopPropagation(); onLocationClick(loc.id); } } : {})} />
       ))}
+      {locsWithStock.length > 1 && (
+        <Chip label={`Σ ${variant.totalStock}`} size="small" color={color} sx={{ fontSize: "0.65rem", height: 20 }} />
+      )}
     </Stack>
   );
 }

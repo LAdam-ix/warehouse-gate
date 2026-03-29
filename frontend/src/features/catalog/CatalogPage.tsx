@@ -234,6 +234,9 @@ function ProductVariantStock({ productId, productName, isService }: { productId:
               )}
             </Box>
 
+            {/* Stock (physical only) */}
+            {!isService && <StockChips variant={v} locations={locations} />}
+
             {/* Price */}
             <Stack alignItems="flex-end" sx={{ minWidth: 64 }}>
               <Typography variant="body2">€{v.effectivePrice}</Typography>
@@ -243,14 +246,6 @@ function ProductVariantStock({ productId, productName, isService }: { productId:
                 </Typography>
               )}
             </Stack>
-
-            {/* Cost */}
-            <Typography variant="caption" color="text.secondary" sx={{ minWidth: 52, textAlign: "right" }}>
-              €{v.effectiveCost}
-            </Typography>
-
-            {/* Stock (physical only) */}
-            {!isService && <StockChips variant={v} locations={locations} />}
 
             {/* Actions (stop propagation so clicks don't navigate) */}
             <Box onClick={(e) => e.stopPropagation()}>
