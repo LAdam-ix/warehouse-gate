@@ -18,8 +18,9 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   useProducts, useProduct, useCreateProduct, useCategories, useCreateCategory,
-  useQuickSell, useWarehouseSettings,
+  useQuickSell, useWarehouseSettings, useLocations,
 } from "../../api/hooks";
+import { StockChips } from "../../components/ProductPickerPanel";
 import type { Product, ProductVariant, ProductCreate, ProductCostWrite } from "../../types/api";
 import CostFields from "../../components/CostFields";
 import MathTextField from "../../components/MathTextField";
@@ -181,6 +182,8 @@ const CATALOG_VARIANT_LIMIT = 5;
 function ProductVariantStock({ productId, productName, isService }: { productId: string; productName: string; isService?: boolean }) {
   const { t } = useTranslation();
   const { data: detail, isLoading } = useProduct(productId);
+  const { data: allLocs } = useLocations();
+  const locations = (allLocs ?? []).filter((l: { isActive: boolean }) => l.isActive).map((l: { id: string; name: string }) => ({ id: l.id, name: l.name }));
   const { showSku } = useContext(CatalogPrefsContext);
   const navigate = useNavigate();
   const [showAll, setShowAll] = useState(false);
@@ -203,7 +206,6 @@ function ProductVariantStock({ productId, productName, isService }: { productId:
           : productName;
         const photoUrl = v.galleryPhotoUrl ?? v.photo ?? null;
         const colorHex = v.attributeValues.find((av) => av.colorHex)?.colorHex ?? null;
-        const stockColor = v.totalStock === 0 ? "error" : v.isLowStock ? "warning" : "success";
         const deltaNum = parseFloat(v.priceDelta);
 
         return (
@@ -248,7 +250,7 @@ function ProductVariantStock({ productId, productName, isService }: { productId:
             </Typography>
 
             {/* Stock (physical only) */}
-            {!isService && <Chip label={v.totalStock} size="small" color={stockColor} sx={{ minWidth: 36 }} />}
+            {!isService && <StockChips variant={v} locations={locations} />}
 
             {/* Actions (stop propagation so clicks don't navigate) */}
             <Box onClick={(e) => e.stopPropagation()}>
@@ -282,6 +284,8 @@ function ProductRow({ product }: { product: Product }) {
 
   // For single-variant quick actions we need the variant from detail
   const { data: detail } = useProduct(product.id);
+  const { data: allLocations } = useLocations();
+  const locations = (allLocations ?? []).filter((l: { isActive: boolean }) => l.isActive).map((l: { id: string; name: string }) => ({ id: l.id, name: l.name }));
   const singleVariant = isSingleVariant ? detail?.variants.find((v) => v.isActive) : undefined;
 
   const handleRowClick = () => {
@@ -362,17 +366,21 @@ function ProductRow({ product }: { product: Product }) {
             </Box>
           </Stack>
 
-          {/* Stock — fixed width column (physical only, empty for services) */}
-          <Stack alignItems="center" justifyContent="center" sx={{ width: 52, flexShrink: 0, py: 1 }}>
-            {isPhysical && (
-              <Chip
-                label={product.totalStock}
-                size="small"
-                color={stockColor}
-                variant="outlined"
-                sx={{ minWidth: 36 }}
-              />
-            )}
+          {/* Stock — per-location for physical, empty for services */}
+          <Stack alignItems="flex-end" justifyContent="center" sx={{ minWidth: 52, flexShrink: 0, py: 1 }}>
+            {isPhysical && (() => {
+              const activeVars = detail?.variants.filter((v) => v.isActive) ?? [];
+              if (activeVars.length > 0 && activeVars.some((v) => v.stockByLocation)) {
+                const aggregated: Record<string, number> = {};
+                for (const v of activeVars) {
+                  for (const [locId, qty] of Object.entries(v.stockByLocation ?? {})) {
+                    aggregated[locId] = (aggregated[locId] ?? 0) + qty;
+                  }
+                }
+                return <StockChips variant={{ totalStock: product.totalStock, stockByLocation: aggregated }} locations={locations} />;
+              }
+              return <Chip label={product.totalStock} size="small" color={stockColor} variant="outlined" sx={{ minWidth: 36 }} />;
+            })()}
           </Stack>
 
           {/* Price — fixed width column, right next to divider */}
