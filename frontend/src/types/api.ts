@@ -23,15 +23,15 @@ export interface PaginatedResponse<T> {
 export interface Firm {
   id: string;
   name: string;
-  warehouseMode: "strict" | "soft" | "disabled";
 }
 
-export type FirmUpdate = Partial<Pick<Firm, "warehouseMode">>;
+export type FirmUpdate = Partial<Pick<Firm, "name">>;
 
 export interface WarehouseSettings {
   showSku: boolean;
   skipConfirm: boolean;
   defaultEnergyRate: string | null;
+  warehouseMode: "strict" | "soft" | "disabled";
 }
 
 export type WarehouseSettingsUpdate = Partial<WarehouseSettings>;

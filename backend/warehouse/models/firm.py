@@ -104,6 +104,12 @@ class WarehouseSettings(models.Model):
         max_digits=10, decimal_places=4, null=True, blank=True,
         help_text="Default energy cost per kWh (€). Pre-filled in production cost forms.",
     )
+    warehouse_mode = models.CharField(
+        max_length=20,
+        choices=[("strict", "Strict"), ("soft", "Soft"), ("disabled", "Disabled")],
+        default="soft",
+        help_text="Stock validation mode: strict blocks negative stock, soft warns, disabled does nothing.",
+    )
 
     @classmethod
     def for_firm(cls, firm):

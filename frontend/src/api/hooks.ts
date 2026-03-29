@@ -49,7 +49,7 @@ export const useUpdateWarehouseSettings = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: WarehouseSettingsUpdate) => patch<WarehouseSettings>("/settings/", data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["warehouse-settings"] }),
+    onSuccess: () => qc.refetchQueries({ queryKey: ["warehouse-settings"] }),
   });
 };
 

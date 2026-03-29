@@ -16,7 +16,7 @@ import { toast } from "react-toastify";
 import {
   useSale, useUpdateSale, useFinalizeSale, useVoidSale, useDeleteSale,
   useAddSaleLine, useUpdateSaleLine, useDeleteSaleLine,
-  useLocations, useStockEntries, useFirm,
+  useLocations, useStockEntries, useWarehouseSettings,
 } from "../../api/hooks";
 import type { Location, SaleLine, SaleWrite, StockEntry } from "../../types/api";
 import { intQtyInputProps } from "../../utils/form";
@@ -300,7 +300,7 @@ export default function SaleDetailPage() {
 
   const { data: sale, isLoading } = useSale(saleId!);
   const { data: locations = [] } = useLocations();
-  const { data: firm } = useFirm();
+  const { data: settings } = useWarehouseSettings();
 
   const updateSale = useUpdateSale(saleId!);
   const finalize = useFinalizeSale(saleId!);
@@ -443,7 +443,7 @@ export default function SaleDetailPage() {
               onSelect={handleAddLine}
               showStock
               quickAmounts={[1, 5]}
-              filterFn={firm?.warehouseMode === "strict"
+              filterFn={settings?.warehouseMode === "strict"
                 ? (p) => p.itemType === "service" || p.totalStock > 0
                 : undefined}
             />

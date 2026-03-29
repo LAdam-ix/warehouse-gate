@@ -13,7 +13,7 @@ import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import { toast } from "react-toastify";
 import {
-  useFirm, useUpdateFirm, useWarehouseSettings, useUpdateWarehouseSettings,
+  useFirm, useWarehouseSettings, useUpdateWarehouseSettings,
   useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation, useMoveLocation,
 } from "../../api/hooks";
 import { useConfirm } from "../../components/ConfirmDialog";
@@ -193,20 +193,19 @@ function LocationsSettings() {
 export function WarehouseSettings() {
   const { t } = useTranslation();
   const { data: firm, isLoading } = useFirm();
-  const update = useUpdateFirm();
   const { data: wSettings } = useWarehouseSettings();
   const updateWSettings = useUpdateWarehouseSettings();
   const [mode, setMode] = useState<string>("");
 
-  // Sync local state when firm data loads
+  // Sync local state when settings data loads
   useEffect(() => {
-    if (firm) setMode(firm.warehouseMode);
-  }, [firm]);
+    if (wSettings) setMode(wSettings.warehouseMode);
+  }, [wSettings]);
 
-  const isDirty = firm && mode !== firm.warehouseMode;
+  const isDirty = wSettings && mode !== wSettings.warehouseMode;
 
   const handleSave = async () => {
-    await update.mutateAsync({ warehouseMode: mode as "strict" | "soft" | "disabled" });
+    await updateWSettings.mutateAsync({ warehouseMode: mode as "strict" | "soft" | "disabled" });
     toast.success(t("settings.settingsSaved"));
   };
 
@@ -307,7 +306,7 @@ export function WarehouseSettings() {
                 <Button
                   variant="contained"
                   onClick={handleSave}
-                  disabled={update.isPending}
+                  disabled={updateWSettings.isPending}
                   sx={{ alignSelf: "flex-end" }}
                 >
                   {t("settings.saveChanges")}

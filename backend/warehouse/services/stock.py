@@ -35,10 +35,11 @@ def _get_or_create_entry(variant: ProductVariant, location: Location) -> StockEn
 
 def _check_stock(firm: Firm, variant: ProductVariant, quantity: int, location: Location):
     """Raise InsufficientStockError if strict mode and not enough stock."""
-    mode = firm.warehouse_mode
-    if mode == Firm.WarehouseMode.DISABLED:
+    from warehouse.models import WarehouseSettings
+    mode = WarehouseSettings.for_firm(firm).warehouse_mode
+    if mode == "disabled":
         return
-    if mode == Firm.WarehouseMode.STRICT:
+    if mode == "strict":
         entry = _get_or_create_entry(variant, location)
         if entry.quantity < quantity:
             raise InsufficientStockError(variant, entry.quantity, quantity)
@@ -257,7 +258,8 @@ def revert_movement(*, movement: StockMovement, user=None):
         entry = _get_or_create_entry(mv.variant, mv.location)
         new_qty = entry.quantity - mv.quantity_delta
         # In strict mode, block if reverting would make stock negative
-        if firm.warehouse_mode == Firm.WarehouseMode.STRICT and new_qty < 0:
+        from warehouse.models import WarehouseSettings
+        if WarehouseSettings.for_firm(firm).warehouse_mode == "strict" and new_qty < 0:
             raise InsufficientStockError(mv.variant, entry.quantity, mv.quantity_delta)
         entry.quantity = new_qty
         entry.save(update_fields=["quantity"])

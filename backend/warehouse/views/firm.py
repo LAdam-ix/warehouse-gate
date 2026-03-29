@@ -43,6 +43,9 @@ class WarehouseSettingsSerializer(serializers.Serializer):
     default_energy_rate = serializers.DecimalField(
         max_digits=10, decimal_places=4, required=False, allow_null=True
     )
+    warehouse_mode = serializers.ChoiceField(
+        choices=["strict", "soft", "disabled"], required=False
+    )
 
 
 class WarehouseSettingsView(APIView):
@@ -72,6 +75,9 @@ class WarehouseSettingsView(APIView):
         if "default_energy_rate" in serializer.validated_data:
             settings_obj.default_energy_rate = serializer.validated_data["default_energy_rate"]
             update_fields.append("default_energy_rate")
+        if "warehouse_mode" in serializer.validated_data:
+            settings_obj.warehouse_mode = serializer.validated_data["warehouse_mode"]
+            update_fields.append("warehouse_mode")
         if update_fields:
             settings_obj.save(update_fields=update_fields)
         return Response(WarehouseSettingsSerializer(settings_obj).data)

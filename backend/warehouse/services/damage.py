@@ -53,8 +53,10 @@ def report_damage(
         updated_by=user,
     )
 
-    if firm.warehouse_mode != Firm.WarehouseMode.DISABLED:
-        entry.quantity = max(0, entry.quantity - quantity) if firm.warehouse_mode == Firm.WarehouseMode.STRICT else entry.quantity - quantity
+    from warehouse.models import WarehouseSettings
+    mode = WarehouseSettings.for_firm(firm).warehouse_mode
+    if mode != "disabled":
+        entry.quantity = max(0, entry.quantity - quantity) if mode == "strict" else entry.quantity - quantity
         entry.save(update_fields=["quantity"])
 
         StockMovement.objects.create(
