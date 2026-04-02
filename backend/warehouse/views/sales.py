@@ -35,10 +35,13 @@ class SaleViewSet(FirmScopedMixin, viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         sale = self.get_object()
         if sale.status != Sale.Status.DRAFT:
-            return Response(
-                {"detail": "Only draft sales can be edited."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            # Allow editing note on finalized/voided sales
+            non_note_fields = set(request.data.keys()) - {"note"}
+            if non_note_fields:
+                return Response(
+                    {"detail": "Only draft sales can be edited."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
