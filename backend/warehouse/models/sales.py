@@ -14,6 +14,8 @@ class Sale(AuditModel):
         DRAFT = "draft", "Draft"
         FINALIZED = "finalized", "Finalized"
         VOIDED = "voided", "Voided"
+        DISCARDED = "discarded", "Discarded"
+        REFUNDED = "refunded", "Refunded"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     firm = models.ForeignKey("warehouse.Firm", on_delete=models.CASCADE, related_name="sales")

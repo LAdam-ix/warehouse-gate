@@ -435,7 +435,7 @@ export default function SaleDetailPage() {
         </Box>
         <Chip
           label={sale.status}
-          color={sale.status === "finalized" ? "success" : sale.status === "voided" ? "default" : "warning"}
+          color={sale.status === "finalized" ? "success" : sale.status === "voided" ? "error" : sale.status === "refunded" ? "info" : sale.status === "discarded" ? "default" : "warning"}
         />
       </Stack>
 

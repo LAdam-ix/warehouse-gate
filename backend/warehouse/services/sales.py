@@ -87,8 +87,8 @@ def void_sale(sale: Sale, user=None) -> Sale:
     Transition sale → Voided.
     Returns stock for all physical lines if sale was previously finalized.
     """
-    if sale.status == Sale.Status.VOIDED:
-        raise ValidationError("Sale is already voided.")
+    if sale.status in (Sale.Status.VOIDED, Sale.Status.DISCARDED, Sale.Status.REFUNDED):
+        raise ValidationError("Sale is already voided/discarded.")
 
     was_finalized = sale.status == Sale.Status.FINALIZED
 
@@ -113,7 +113,7 @@ def void_sale(sale: Sale, user=None) -> Sale:
                             batch_id=void_batch_id,
                         )
 
-    sale.status = Sale.Status.VOIDED
+    sale.status = Sale.Status.VOIDED if was_finalized else Sale.Status.DISCARDED
     sale.updated_by = user
     sale.save(update_fields=["status", "updated_by", "updated_at"])
     return sale
@@ -149,6 +149,7 @@ def apply_credit_note(sale: Sale, credit_note_id, user=None) -> Sale:
                     )
 
     sale.credit_note_id = credit_note_id
+    sale.status = Sale.Status.REFUNDED
     sale.updated_by = user
-    sale.save(update_fields=["credit_note_id", "updated_by", "updated_at"])
+    sale.save(update_fields=["credit_note_id", "status", "updated_by", "updated_at"])
     return sale
