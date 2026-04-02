@@ -18,7 +18,6 @@ import type { StockMovement } from "../../types/api";
 import { useTranslation } from "react-i18next";
 import { navLinkProps } from "../../utils/navLink";
 
-const REVERTABLE_TYPES = new Set(["produced", "adjustment", "transfer_out", "transfer_in"]);
 
 // ─── Movement log grouping ────────────────────────────────────────────────────
 
@@ -74,7 +73,6 @@ function MovementGroupRow({ group, showLocations }: { group: MovementGroup; show
 
   if (!isBatch) {
     const m = first;
-    const canRevert = REVERTABLE_TYPES.has(m.movementType);
     return (
       <TableRow hover>
         <TableCell>
@@ -103,7 +101,7 @@ function MovementGroupRow({ group, showLocations }: { group: MovementGroup; show
         <TableCell>
           <Stack direction="row" alignItems="center" spacing={0.5}>
             <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>{m.note}</Typography>
-            {canRevert && (
+            {m.isRevertable && (
               <IconButton size="small" onClick={() => handleRevert(m)} disabled={revert.isPending} title={t("stock.revert")}>
                 <UndoIcon sx={{ fontSize: 16 }} />
               </IconButton>

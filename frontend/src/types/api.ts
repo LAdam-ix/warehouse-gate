@@ -240,6 +240,7 @@ export interface StockMovement {
   batchId: string | null;
   saleLine: string | null;
   damageReport: string | null;
+  isRevertable: boolean;
   createdAt: string;
   createdBy: string | null;
   createdByName: string | null;

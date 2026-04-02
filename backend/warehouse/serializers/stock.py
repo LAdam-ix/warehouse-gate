@@ -34,6 +34,7 @@ class StockMovementSerializer(serializers.ModelSerializer):
     variant_name = serializers.SerializerMethodField()
     location_name = serializers.CharField(source="location.name", read_only=True)
     created_by_name = serializers.CharField(source="created_by.name", read_only=True)
+    is_revertable = serializers.SerializerMethodField()
 
     class Meta:
         model = StockMovement
@@ -50,6 +51,7 @@ class StockMovementSerializer(serializers.ModelSerializer):
             "batch_id",
             "sale_line",
             "damage_report",
+            "is_revertable",
             "created_at",
             "created_by",
             "created_by_name",
@@ -60,6 +62,16 @@ class StockMovementSerializer(serializers.ModelSerializer):
 
     def get_variant_name(self, obj):
         return str(obj.variant)
+
+    def get_is_revertable(self, obj):
+        from warehouse.services.stock import REVERTABLE_TYPES
+        if obj.movement_type not in REVERTABLE_TYPES:
+            return False
+        return not StockMovement.objects.filter(
+            variant=obj.variant,
+            location=obj.location,
+            created_at__gt=obj.created_at,
+        ).exists()
 
 
 class AddStockSerializer(serializers.Serializer):
