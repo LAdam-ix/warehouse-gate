@@ -632,6 +632,13 @@
     "defaultEnergyRateHelper": "Pre-filled in production cost forms. Can be overridden per product.",
     "saveChanges": "Save changes",
     "settingsSaved": "Settings saved",
+    "colorLibrary": "Color Library",
+    "colorLibraryDescription": "Custom colors for the variant color picker. Mark favorites to show them by default.",
+    "colorNamePlaceholder": "Color name…",
+    "managePresets": "Manage default presets ▾",
+    "hidePresets": "Hide presets ▴",
+    "saveColors": "Save colors",
+    "colorsSaved": "Colors saved",
     "quickAddStock": "Quick Add Stock — amounts",
     "quickAddFuture": "Configurable amounts coming in a future update.",
     "locations": {

@@ -32,7 +32,8 @@ export interface WarehouseSettings {
   skipConfirm: boolean;
   defaultEnergyRate: string | null;
   warehouseMode: "strict" | "soft" | "disabled";
-  favoriteColors: { name: string; hex: string }[];
+  favoriteColors: { name: string; hex: string; favorite: boolean }[];
+  hiddenPresetColors: string[]; // hex values of hidden default presets
 }
 
 export type WarehouseSettingsUpdate = Partial<WarehouseSettings>;

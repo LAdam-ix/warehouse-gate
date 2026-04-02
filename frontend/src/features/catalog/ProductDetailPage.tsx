@@ -50,25 +50,7 @@ import { useTranslation } from "react-i18next";
 
 // ─── Color presets ────────────────────────────────────────────────────────────
 
-const COLOR_PRESETS = [
-  { name: "Red",    hex: "#ef5350" },
-  { name: "Orange", hex: "#ff9800" },
-  { name: "Yellow", hex: "#ffee58" },
-  { name: "Lime",   hex: "#9ccc65" },
-  { name: "Green",  hex: "#4caf50" },
-  { name: "Teal",   hex: "#26a69a" },
-  { name: "Cyan",   hex: "#26c6da" },
-  { name: "Blue",   hex: "#42a5f5" },
-  { name: "Indigo", hex: "#5c6bc0" },
-  { name: "Purple", hex: "#ab47bc" },
-  { name: "Pink",   hex: "#ec407a" },
-  { name: "Brown",  hex: "#8d6e63" },
-  { name: "Black",  hex: "#212121" },
-  { name: "Gray",   hex: "#9e9e9e" },
-  { name: "White",  hex: "#fafafa" },
-  { name: "Gold",   hex: "#ffd54f" },
-  { name: "Silver", hex: "#cfd8dc" },
-];
+import { COLOR_PRESETS } from "../../utils/colorPresets";
 
 // ─── Drag-and-drop photo upload zone ─────────────────────────────────────────
 
@@ -645,7 +627,10 @@ function VariantManager({
 }) {
   const { t } = useTranslation();
   const { data: wSettings } = useWarehouseSettings();
-  const favoriteColors = wSettings?.favoriteColors ?? [];
+  const favoriteColors = (wSettings?.favoriteColors ?? []).filter((c) => c.favorite);
+  const allCustomColors = wSettings?.favoriteColors ?? [];
+  const hiddenPresets = new Set(wSettings?.hiddenPresetColors ?? []);
+  const visiblePresets = COLOR_PRESETS.filter((c) => !hiddenPresets.has(c.hex));
   const [showAllColors, setShowAllColors] = useState(false);
   const createAttr = useCreateAttribute();
   const deleteAttr = useDeleteAttribute();
@@ -1078,6 +1063,13 @@ function VariantManager({
                 <Stack key={v.id} direction="row" alignItems="center" spacing={0.5}>
                   <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>{vLabel}</Typography>
                   <Chip label={`${v.totalStock}`} size="small" variant="outlined" sx={{ height: 18, fontSize: "0.7rem" }} />
+                  {[10, 5, 1].map((n) => (
+                    <Button key={-n} size="small" variant="outlined" color="error" disabled={qty < n}
+                      sx={{ minWidth: 32, px: 0.5, fontSize: "0.7rem" }}
+                      onClick={() => batchStockAdjust(v.id, -n)}>
+                      -{n}
+                    </Button>
+                  ))}
                   <TextField
                     size="small"
                     type="number"
@@ -1094,13 +1086,6 @@ function VariantManager({
                     slotProps={{ htmlInput: { min: 0, step: 1, style: { textAlign: "center", padding: "2px 0" } } }}
                     sx={{ width: 48, flexShrink: 0, "& .MuiOutlinedInput-root": { height: 26 }, "& input[type=number]::-webkit-inner-spin-button": { WebkitAppearance: "none", margin: 0 }, "& input[type=number]::-webkit-outer-spin-button": { WebkitAppearance: "none", margin: 0 }, "& input[type=number]": { MozAppearance: "textfield" } }}
                   />
-                  {[10, 5, 1].map((n) => (
-                    <Button key={-n} size="small" variant="outlined" color="error" disabled={qty < n}
-                      sx={{ minWidth: 32, px: 0.5, fontSize: "0.7rem" }}
-                      onClick={() => batchStockAdjust(v.id, -n)}>
-                      -{n}
-                    </Button>
-                  ))}
                   {[1, 5, 10].map((n) => (
                     <Button key={n} size="small" variant="outlined" sx={{ minWidth: 32, px: 0.5, fontSize: "0.7rem" }}
                       onClick={() => batchStockAdjust(v.id, n)}>
@@ -1406,7 +1391,21 @@ function VariantManager({
                       </Button>
                       {showAllColors && (
                         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 0.75 }}>
-                          {COLOR_PRESETS.map((c) => (
+                          {allCustomColors.filter((c) => !c.favorite).map((c) => (
+                            <Tooltip key={c.hex} title={c.name} placement="top">
+                              <Box
+                                onClick={() => { if (!valueName.trim()) setValueName(c.name); setValueColor(c.hex); }}
+                                sx={{
+                                  width: 20, height: 20, borderRadius: "50%",
+                                  bgcolor: c.hex, border: "2px solid",
+                                  borderColor: valueColor === c.hex ? "primary.main" : "divider",
+                                  cursor: "pointer", opacity: 0.7,
+                                  "&:hover": { opacity: 1, borderColor: "primary.main" },
+                                }}
+                              />
+                            </Tooltip>
+                          ))}
+                          {visiblePresets.map((c) => (
                             <Tooltip key={c.hex} title={c.name} placement="top">
                               <Box
                                 onClick={() => { if (!valueName.trim()) setValueName(c.name); setValueColor(c.hex); }}
@@ -1429,7 +1428,7 @@ function VariantManager({
                         {t("variants.addValueDialog.presetsLabel")}
                       </Typography>
                       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-                        {COLOR_PRESETS.map((c) => (
+                        {visiblePresets.map((c) => (
                           <Tooltip key={c.hex} title={c.name} placement="top">
                             <Box
                               onClick={() => { if (!valueName.trim()) setValueName(c.name); setValueColor(c.hex); }}

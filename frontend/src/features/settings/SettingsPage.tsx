@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { blockNonDecimal } from "../../utils/form";
+import { COLOR_PRESETS } from "../../utils/colorPresets";
 import {
   Box, Button, CircularProgress, Divider, FormControl, FormControlLabel, IconButton,
   InputLabel, MenuItem, Paper, Select, Stack, Switch, TextField, Tooltip, Typography,
@@ -127,6 +128,131 @@ function EnergyRateField({ value, onSave, disabled }: { value: string | null; on
         helperText={t("settings.defaultEnergyRateHelper")}
         sx={{ maxWidth: 220 }}
       />
+    </Box>
+  );
+}
+
+// ─── Color Manager ────────────────────────────────────────────────────────────
+
+function ColorManager({
+  colors,
+  hiddenPresets,
+  onSave,
+  disabled,
+}: {
+  colors: { name: string; hex: string; favorite: boolean }[];
+  hiddenPresets: string[];
+  onSave: (colors: { name: string; hex: string; favorite: boolean }[], hidden: string[]) => void;
+  disabled: boolean;
+}) {
+  const { t } = useTranslation();
+  const [localColors, setLocalColors] = useState(colors);
+  const [localHidden, setLocalHidden] = useState(hiddenPresets);
+  const [newName, setNewName] = useState("");
+  const [newHex, setNewHex] = useState("#42a5f5");
+  const [showPresets, setShowPresets] = useState(false);
+
+  useEffect(() => { setLocalColors(colors); }, [colors]);
+  useEffect(() => { setLocalHidden(hiddenPresets); }, [hiddenPresets]);
+
+  const isDirty = JSON.stringify(localColors) !== JSON.stringify(colors) || JSON.stringify(localHidden) !== JSON.stringify(hiddenPresets);
+
+  const addColor = () => {
+    if (!newName.trim() || !newHex) return;
+    const updated = [...localColors, { name: newName.trim(), hex: newHex, favorite: true }];
+    setLocalColors(updated);
+    setNewName("");
+    setNewHex("#42a5f5");
+  };
+
+  const toggleFavorite = (idx: number) => {
+    const updated = [...localColors];
+    updated[idx] = { ...updated[idx], favorite: !updated[idx].favorite };
+    setLocalColors(updated);
+  };
+
+  const removeColor = (idx: number) => {
+    setLocalColors((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const togglePresetHidden = (hex: string) => {
+    setLocalHidden((prev) => prev.includes(hex) ? prev.filter((h) => h !== hex) : [...prev, hex]);
+  };
+
+  const save = () => { onSave(localColors, localHidden); toast.success(t("settings.colorsSaved")); };
+
+  return (
+    <Box>
+      <Typography variant="body2" fontWeight="medium" gutterBottom>{t("settings.colorLibrary")}</Typography>
+      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+        {t("settings.colorLibraryDescription")}
+      </Typography>
+
+      {/* Custom colors */}
+      <Stack spacing={0.5} sx={{ mb: 1.5 }}>
+        {localColors.map((c, i) => (
+          <Stack key={i} direction="row" alignItems="center" spacing={1}>
+            <Box sx={{ width: 20, height: 20, borderRadius: "50%", bgcolor: c.hex, border: "1px solid", borderColor: "divider", flexShrink: 0 }} />
+            <Typography variant="body2" sx={{ flex: 1 }}>{c.name}</Typography>
+            <Typography variant="caption" color="text.secondary">{c.hex}</Typography>
+            <IconButton size="small" onClick={() => toggleFavorite(i)}>
+              {c.favorite ? <StarIcon sx={{ fontSize: 16, color: "#f59e0b" }} /> : <StarBorderIcon sx={{ fontSize: 16 }} />}
+            </IconButton>
+            <IconButton size="small" onClick={() => removeColor(i)}>
+              <DeleteIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Stack>
+        ))}
+      </Stack>
+
+      {/* Add new color */}
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
+        <Box sx={{ position: "relative", flexShrink: 0 }}>
+          <Box
+            component="input" type="color" value={newHex}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewHex(e.target.value)}
+            sx={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer", border: "none", p: 0 }}
+          />
+          <Box sx={{ width: 28, height: 28, borderRadius: "50%", bgcolor: newHex, border: "1px solid", borderColor: "divider", cursor: "pointer" }} />
+        </Box>
+        <TextField size="small" placeholder={t("settings.colorNamePlaceholder")} value={newName} onChange={(e) => setNewName(e.target.value)} sx={{ flex: 1 }} onKeyDown={(e) => { if (e.key === "Enter") addColor(); }} />
+        <Button size="small" variant="outlined" onClick={addColor} disabled={!newName.trim()}>
+          <AddIcon sx={{ fontSize: 16 }} />
+        </Button>
+      </Stack>
+
+      {/* Default presets — toggle visibility */}
+      <Button size="small" sx={{ textTransform: "none", fontSize: "0.75rem", p: 0, mb: 0.5 }} onClick={() => setShowPresets((v) => !v)}>
+        {showPresets ? t("settings.hidePresets") : t("settings.managePresets")}
+      </Button>
+      {showPresets && (
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 1.5 }}>
+          {COLOR_PRESETS.map((c) => {
+            const hidden = localHidden.includes(c.hex);
+            return (
+              <Tooltip key={c.hex} title={`${c.name}${hidden ? " (hidden)" : ""}`} placement="top">
+                <Box
+                  onClick={() => togglePresetHidden(c.hex)}
+                  sx={{
+                    width: 22, height: 22, borderRadius: "50%",
+                    bgcolor: c.hex, border: "2px solid",
+                    borderColor: hidden ? "error.main" : "divider",
+                    opacity: hidden ? 0.3 : 1,
+                    cursor: "pointer",
+                    "&:hover": { opacity: 1 },
+                  }}
+                />
+              </Tooltip>
+            );
+          })}
+        </Box>
+      )}
+
+      {isDirty && (
+        <Button size="small" variant="contained" onClick={save} disabled={disabled}>
+          {t("settings.saveColors")}
+        </Button>
+      )}
     </Box>
   );
 }
@@ -300,6 +426,13 @@ export function WarehouseSettings() {
               <EnergyRateField
                 value={wSettings?.defaultEnergyRate ?? null}
                 onSave={(val) => updateWSettings.mutate({ defaultEnergyRate: val })}
+                disabled={updateWSettings.isPending}
+              />
+              <Divider />
+              <ColorManager
+                colors={wSettings?.favoriteColors ?? []}
+                hiddenPresets={wSettings?.hiddenPresetColors ?? []}
+                onSave={(colors, hidden) => updateWSettings.mutate({ favoriteColors: colors, hiddenPresetColors: hidden })}
                 disabled={updateWSettings.isPending}
               />
               {isDirty && (

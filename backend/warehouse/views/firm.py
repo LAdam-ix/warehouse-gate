@@ -49,6 +49,9 @@ class WarehouseSettingsSerializer(serializers.Serializer):
     favorite_colors = serializers.ListField(
         child=serializers.DictField(), required=False
     )
+    hidden_preset_colors = serializers.ListField(
+        child=serializers.CharField(), required=False
+    )
 
 
 class WarehouseSettingsView(APIView):
@@ -84,6 +87,9 @@ class WarehouseSettingsView(APIView):
         if "favorite_colors" in serializer.validated_data:
             settings_obj.favorite_colors = serializer.validated_data["favorite_colors"]
             update_fields.append("favorite_colors")
+        if "hidden_preset_colors" in serializer.validated_data:
+            settings_obj.hidden_preset_colors = serializer.validated_data["hidden_preset_colors"]
+            update_fields.append("hidden_preset_colors")
         if update_fields:
             settings_obj.save(update_fields=update_fields)
         return Response(WarehouseSettingsSerializer(settings_obj).data)

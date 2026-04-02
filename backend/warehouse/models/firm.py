@@ -112,7 +112,11 @@ class WarehouseSettings(models.Model):
     )
     favorite_colors = models.JSONField(
         default=list, blank=True,
-        help_text='List of {name, hex} objects for the color picker. E.g. [{"name":"Sky Blue","hex":"#87ceeb"}]',
+        help_text='List of {name, hex, favorite} objects. Custom color library.',
+    )
+    hidden_preset_colors = models.JSONField(
+        default=list, blank=True,
+        help_text='List of hex strings of default presets to hide.',
     )
 
     @classmethod
