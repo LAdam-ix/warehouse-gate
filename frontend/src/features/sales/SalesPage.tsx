@@ -1,27 +1,40 @@
 import { useState } from "react";
 import {
-  Box, Button, Chip, CircularProgress, FormControl, InputLabel,
+  Box, Button, Chip, CircularProgress, FormControl, IconButton, InputLabel,
   MenuItem, Paper, Select, Stack, Table, TableBody, TableCell,
   TableHead, TableRow, Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate } from "react-router-dom";
-import { useSales, useCreateSale } from "../../api/hooks";
+import { useSales, useCreateSale, useDeleteSaleById } from "../../api/hooks";
+import { useConfirm } from "../../components/ConfirmDialog";
 import { useTranslation } from "react-i18next";
 import { navLinkProps } from "../../utils/navLink";
 
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<string, "warning" | "success" | "default" | "error" | "info"> = {
   draft: "warning",
   finalized: "success",
-  voided: "default",
-} as const;
+  voided: "error",
+  discarded: "default",
+  refunded: "info",
+};
 
 export default function SalesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const createSale = useCreateSale();
+  const deleteSale = useDeleteSaleById();
+  const confirm = useConfirm();
   const [statusFilter, setStatusFilter] = useState("");
   const { data, isLoading } = useSales(statusFilter ? { status: statusFilter } : undefined);
+
+  const handleDelete = async (saleId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!await confirm(t("sales.deleteConfirm"), { title: t("sales.deleteTitle"), confirmLabel: t("common.delete") })) return;
+    await deleteSale.mutateAsync(saleId);
+  };
   return (
     <Stack spacing={2}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -46,6 +59,8 @@ export default function SalesPage() {
           <MenuItem value="draft">{t("sales.draft")}</MenuItem>
           <MenuItem value="finalized">{t("sales.finalized")}</MenuItem>
           <MenuItem value="voided">{t("sales.voided")}</MenuItem>
+          <MenuItem value="discarded">{t("sales.discarded")}</MenuItem>
+          <MenuItem value="refunded">{t("sales.refunded")}</MenuItem>
         </Select>
       </FormControl>
 
@@ -61,6 +76,7 @@ export default function SalesPage() {
               <TableCell align="right">{t("sales.total")}</TableCell>
               <TableCell align="right">{t("sales.profit")}</TableCell>
               <TableCell>{t("sales.date")}</TableCell>
+              <TableCell />
             </TableRow>
           </TableHead>
           <TableBody>
@@ -101,11 +117,18 @@ export default function SalesPage() {
                       : new Date(sale.createdAt).toLocaleDateString()}
                   </Typography>
                 </TableCell>
+                <TableCell sx={{ width: 40, p: 0.5 }}>
+                  {(sale.status === "voided" || sale.status === "discarded") && (
+                    <IconButton size="small" onClick={(e) => handleDelete(sale.id, e)} disabled={deleteSale.isPending}>
+                      <DeleteIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
             {!isLoading && data?.results?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
                     {t("sales.noSalesYet")}
                   </Typography>

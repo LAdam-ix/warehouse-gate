@@ -573,6 +573,14 @@ export const useDeleteSale = (id: string) => {
   });
 };
 
+export const useDeleteSaleById = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => del(`/sales/${id}/`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["sales"] }),
+  });
+};
+
 export const useAddSaleLine = (saleId: string) => {
   const qc = useQueryClient();
   return useMutation({
