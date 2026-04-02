@@ -110,13 +110,9 @@ class WarehouseSettings(models.Model):
         default="soft",
         help_text="Stock validation mode: strict blocks negative stock, soft warns, disabled does nothing.",
     )
-    favorite_colors = models.JSONField(
+    color_library = models.JSONField(
         default=list, blank=True,
-        help_text='List of {name, hex, favorite} objects. Custom color library.',
-    )
-    hidden_preset_colors = models.JSONField(
-        default=list, blank=True,
-        help_text='List of hex strings of default presets to hide.',
+        help_text='Unified color library. [{name, hex, status: favorite|normal|hidden, isPreset: bool}]',
     )
 
     @classmethod

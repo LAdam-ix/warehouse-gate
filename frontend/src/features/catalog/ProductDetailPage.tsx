@@ -627,10 +627,14 @@ function VariantManager({
 }) {
   const { t } = useTranslation();
   const { data: wSettings } = useWarehouseSettings();
-  const favoriteColors = (wSettings?.favoriteColors ?? []).filter((c) => c.favorite);
-  const allCustomColors = wSettings?.favoriteColors ?? [];
-  const hiddenPresets = new Set(wSettings?.hiddenPresetColors ?? []);
-  const visiblePresets = COLOR_PRESETS.filter((c) => !hiddenPresets.has(c.hex));
+  const colorLib = wSettings?.colorLibrary ?? [];
+  const hiddenHexes = new Set(colorLib.filter((c) => c.status === "hidden").map((c) => c.hex));
+  const dbPresetHexes = new Set(colorLib.filter((c) => c.isPreset).map((c) => c.hex));
+  const favoriteColors = colorLib.filter((c) => c.status === "favorite");
+  const normalCustom = colorLib.filter((c) => c.status === "normal" && !c.isPreset);
+  const visiblePresets = COLOR_PRESETS.filter((c) => !hiddenHexes.has(c.hex) && !dbPresetHexes.has(c.hex));
+  const normalColors = [...normalCustom, ...visiblePresets];
+  const hasFavorites = favoriteColors.length > 0;
   const [showAllColors, setShowAllColors] = useState(false);
   const createAttr = useCreateAttribute();
   const deleteAttr = useDeleteAttribute();
@@ -1365,7 +1369,7 @@ function VariantManager({
             {valueDialog.attr?.attributeType === "color" && (
               <>
                 <Box>
-                  {favoriteColors.length > 0 ? (
+                  {hasFavorites ? (
                     <>
                       <Typography variant="caption" color="text.secondary" sx={{ mb: 0.75, display: "block" }}>
                         {t("variants.addValueDialog.favorites")}
@@ -1386,40 +1390,30 @@ function VariantManager({
                           </Tooltip>
                         ))}
                       </Box>
-                      <Button size="small" sx={{ mt: 0.5, textTransform: "none", fontSize: "0.7rem", p: 0 }} onClick={() => setShowAllColors((v) => !v)}>
-                        {showAllColors ? t("variants.addValueDialog.hideDefaults") : t("variants.addValueDialog.showDefaults")}
-                      </Button>
-                      {showAllColors && (
-                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 0.75 }}>
-                          {allCustomColors.filter((c) => !c.favorite).map((c) => (
-                            <Tooltip key={c.hex} title={c.name} placement="top">
-                              <Box
-                                onClick={() => { if (!valueName.trim()) setValueName(c.name); setValueColor(c.hex); }}
-                                sx={{
-                                  width: 20, height: 20, borderRadius: "50%",
-                                  bgcolor: c.hex, border: "2px solid",
-                                  borderColor: valueColor === c.hex ? "primary.main" : "divider",
-                                  cursor: "pointer", opacity: 0.7,
-                                  "&:hover": { opacity: 1, borderColor: "primary.main" },
-                                }}
-                              />
-                            </Tooltip>
-                          ))}
-                          {visiblePresets.map((c) => (
-                            <Tooltip key={c.hex} title={c.name} placement="top">
-                              <Box
-                                onClick={() => { if (!valueName.trim()) setValueName(c.name); setValueColor(c.hex); }}
-                                sx={{
-                                  width: 20, height: 20, borderRadius: "50%",
-                                  bgcolor: c.hex, border: "2px solid",
-                                  borderColor: valueColor === c.hex ? "primary.main" : "divider",
-                                  cursor: "pointer", opacity: 0.7,
-                                  "&:hover": { opacity: 1, borderColor: "primary.main" },
-                                }}
-                              />
-                            </Tooltip>
-                          ))}
-                        </Box>
+                      {normalColors.length > 0 && (
+                        <>
+                          <Button size="small" sx={{ mt: 0.5, textTransform: "none", fontSize: "0.7rem", p: 0 }} onClick={() => setShowAllColors((v) => !v)}>
+                            {showAllColors ? t("variants.addValueDialog.hideDefaults") : t("variants.addValueDialog.showDefaults")}
+                          </Button>
+                          {showAllColors && (
+                            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 0.75 }}>
+                              {normalColors.map((c) => (
+                                <Tooltip key={c.hex} title={c.name} placement="top">
+                                  <Box
+                                    onClick={() => { if (!valueName.trim()) setValueName(c.name); setValueColor(c.hex); }}
+                                    sx={{
+                                      width: 20, height: 20, borderRadius: "50%",
+                                      bgcolor: c.hex, border: "2px solid",
+                                      borderColor: valueColor === c.hex ? "primary.main" : "divider",
+                                      cursor: "pointer", opacity: 0.7,
+                                      "&:hover": { opacity: 1, borderColor: "primary.main" },
+                                    }}
+                                  />
+                                </Tooltip>
+                              ))}
+                            </Box>
+                          )}
+                        </>
                       )}
                     </>
                   ) : (
@@ -1428,7 +1422,7 @@ function VariantManager({
                         {t("variants.addValueDialog.presetsLabel")}
                       </Typography>
                       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-                        {visiblePresets.map((c) => (
+                        {normalColors.map((c) => (
                           <Tooltip key={c.hex} title={c.name} placement="top">
                             <Box
                               onClick={() => { if (!valueName.trim()) setValueName(c.name); setValueColor(c.hex); }}
