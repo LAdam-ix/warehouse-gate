@@ -28,6 +28,9 @@ export function StockChips({ variant, locations, chipColor, onLocationClick }: {
   onLocationClick?: (locationId: string) => void;
 }) {
   const color = chipColor ?? (variant.totalStock === 0 ? "error" : "default");
+  if (variant.totalStock === 0) {
+    return <Chip label="0" size="small" color="error" variant="outlined" />;
+  }
   const locsWithStock = locations.filter((loc) => (variant.stockByLocation?.[loc.id] ?? 0) > 0);
   const clickProps = (locId: string) => onLocationClick ? {
     onClick: (e: React.MouseEvent) => { e.stopPropagation(); onLocationClick(locId); },
