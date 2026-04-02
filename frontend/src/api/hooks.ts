@@ -530,6 +530,8 @@ export const useFinalizeSale = (id: string) => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sales"] });
       qc.invalidateQueries({ queryKey: ["stock-entries"] });
+      qc.invalidateQueries({ queryKey: ["stock-movements"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
@@ -542,6 +544,8 @@ export const useVoidSale = (id: string) => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sales"] });
       qc.invalidateQueries({ queryKey: ["stock-entries"] });
+      qc.invalidateQueries({ queryKey: ["stock-movements"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
     },
   });
 };
