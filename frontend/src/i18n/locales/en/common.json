@@ -234,6 +234,16 @@
       "submitEmpty": "Select variants to add",
       "added": "Stock added for {{count}} variant(s)"
     },
+    "redistribute": {
+      "button": "Redistribute",
+      "title": "Redistribute Stock",
+      "mustSumToZero": "Changes must sum to 0",
+      "remaining": "{{count}} to redistribute",
+      "balanced": "Balanced",
+      "submit": "Redistribute",
+      "done": "Stock redistributed",
+      "error": "Redistribution failed"
+    },
     "attributeUpdated": "Attribute updated",
     "attributeCreated": "Attribute created",
     "attributeDeleted": "Attribute deleted",
@@ -284,7 +294,8 @@
       "returned": "Returned",
       "refund_return": "Refund return",
       "transfer_in": "Transfer in",
-      "transfer_out": "Transfer out"
+      "transfer_out": "Transfer out",
+      "redistribution": "Redistribution"
     },
     "addStockPage": {
       "title": "Add Stock",

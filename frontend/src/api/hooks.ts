@@ -9,7 +9,7 @@ import type {
   AttributeValueCreate, AttributeValueUpdate,
   Location, LocationCreate, LocationUpdate,
   StockEntry, StockMovement,
-  AddStockPayload, AdjustStockPayload, TransferStockPayload, BatchTransferPayload,
+  AddStockPayload, AdjustStockPayload, TransferStockPayload, BatchTransferPayload, RedistributePayload,
   Sale, SaleCreate, SaleWrite,
   SaleLine, SaleLineCreate, SaleLineUpdate,
   DamageReport, DamageReportCreate,
@@ -439,6 +439,20 @@ export const useBatchTransfer = () => {
   return useMutation({
     mutationFn: (data: BatchTransferPayload) =>
       post<{ transfersCompleted: number; errors: unknown[]; batchId: string }>("/stock/batch-transfer/", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["stock-entries"] });
+      qc.invalidateQueries({ queryKey: ["stock-movements"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["variants"] });
+    },
+  });
+};
+
+export const useRedistributeStock = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: RedistributePayload) =>
+      post<{ movementsCreated: number; batchId: string }>("/stock/redistribute/", data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stock-entries"] });
       qc.invalidateQueries({ queryKey: ["stock-movements"] });

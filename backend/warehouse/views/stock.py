@@ -14,7 +14,7 @@ from warehouse.serializers.stock import (
     TransferStockSerializer,
     BatchTransferSerializer,
 )
-from warehouse.services.stock import add_stock, adjust_stock, transfer_stock, revert_movement, REVERTABLE_TYPES
+from warehouse.services.stock import add_stock, adjust_stock, transfer_stock, revert_movement, redistribute_stock, REVERTABLE_TYPES
 from .base import FirmScopedMixin
 
 
@@ -313,5 +313,52 @@ class BatchTransferView(APIView):
         return Response({
             "transfersCompleted": len(results),
             "errors": errors,
+            "batchId": str(batch_id),
+        }, status=201)
+
+
+class RedistributeStockView(APIView):
+    """
+    Redistribute stock between variants of the same product at one location.
+    POST /api/v1/stock/redistribute/
+    Body: { locationId, note?, lines: [{ variantId, delta }] }
+    Deltas must sum to 0.
+    """
+    permission_classes = [__import__("warehouse.permissions", fromlist=["CanEditWarehouse"]).CanEditWarehouse]
+
+    def post(self, request):
+        from rest_framework import serializers as ser
+
+        class LineSerializer(ser.Serializer):
+            variant_id = ser.UUIDField()
+            delta = ser.IntegerField()
+
+        class InputSerializer(ser.Serializer):
+            location_id = ser.UUIDField()
+            lines = LineSerializer(many=True)
+            note = ser.CharField(required=False, default="")
+
+        serializer = InputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        firm = request.wh_firm
+
+        location = Location.objects.filter(id=data["location_id"], firm=firm).first()
+        if not location:
+            return Response({"detail": "Location not found."}, status=404)
+
+        from warehouse.services.stock import InsufficientStockError
+        try:
+            movements, batch_id = redistribute_stock(
+                lines=data["lines"],
+                location=location,
+                note=data.get("note", ""),
+                user=request.wh_user,
+            )
+        except (ValueError, InsufficientStockError) as e:
+            return Response({"detail": str(e)}, status=400)
+
+        return Response({
+            "movementsCreated": len(movements),
             "batchId": str(batch_id),
         }, status=201)

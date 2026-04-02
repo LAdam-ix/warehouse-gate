@@ -279,6 +279,12 @@ export interface BatchTransferPayload {
   movementDate?: string;
 }
 
+export interface RedistributePayload {
+  locationId: string;
+  lines: { variantId: string; delta: number }[];
+  note?: string;
+}
+
 // ─── Sale ─────────────────────────────────────────────────────────────────────
 
 export interface Sale {

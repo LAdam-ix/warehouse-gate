@@ -74,6 +74,7 @@ class StockMovement(models.Model):
         REFUND_RETURN = "refund_return", "Refund Return"
         TRANSFER_OUT = "transfer_out", "Transfer Out"
         TRANSFER_IN = "transfer_in", "Transfer In"
+        REDISTRIBUTION = "redistribution", "Redistribution"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     variant = models.ForeignKey(

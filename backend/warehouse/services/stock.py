@@ -242,6 +242,7 @@ REVERTABLE_TYPES = {
     StockMovement.MovementType.ADJUSTMENT,
     StockMovement.MovementType.TRANSFER_OUT,
     StockMovement.MovementType.TRANSFER_IN,
+    StockMovement.MovementType.REDISTRIBUTION,
 }
 
 
@@ -288,3 +289,45 @@ def revert_movement(*, movement: StockMovement, user=None):
             _undo(paired)
 
     _undo(movement)
+
+
+@transaction.atomic
+def redistribute_stock(*, lines, location, note="", user=None):
+    """
+    Redistribute stock between variants of the same product at the same location.
+    Each line is { variant_id: str, delta: int }.
+    Deltas must sum to 0. No variant can go below 0 stock.
+    Creates one redistribution movement per variant with a shared batch_id.
+    """
+    if not lines:
+        raise ValueError("No lines provided.")
+
+    total_delta = sum(l["delta"] for l in lines)
+    if total_delta != 0:
+        raise ValueError(f"Redistribution deltas must sum to 0 (got {total_delta}).")
+
+    batch_id = uuid.uuid4()
+    movements = []
+
+    for line in lines:
+        if line["delta"] == 0:
+            continue
+        variant = ProductVariant.objects.select_related("product__firm").get(id=line["variant_id"])
+        entry = _get_or_create_entry(variant, location)
+        new_qty = entry.quantity + line["delta"]
+        if new_qty < 0:
+            raise InsufficientStockError(variant, entry.quantity, abs(line["delta"]))
+        entry.quantity = new_qty
+        entry.save(update_fields=["quantity"])
+        movements.append(StockMovement.objects.create(
+            variant=variant,
+            location=location,
+            movement_type=StockMovement.MovementType.REDISTRIBUTION,
+            quantity_delta=line["delta"],
+            note=note,
+            movement_date=timezone.now(),
+            created_by=user,
+            batch_id=batch_id,
+        ))
+
+    return movements, batch_id

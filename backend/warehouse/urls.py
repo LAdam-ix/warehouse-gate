@@ -17,6 +17,7 @@ from warehouse.views.stock import (
     AdjustStockView,
     TransferStockView,
     BatchTransferView,
+    RedistributeStockView,
 )
 from warehouse.views.sales import SaleViewSet, SaleLineViewSet
 from warehouse.views.damage import DamageReportViewSet
@@ -48,6 +49,7 @@ urlpatterns = [
     path("stock/adjust/", AdjustStockView.as_view(), name="stock-adjust"),
     path("stock/transfer/", TransferStockView.as_view(), name="stock-transfer"),
     path("stock/batch-transfer/", BatchTransferView.as_view(), name="stock-batch-transfer"),
+    path("stock/redistribute/", RedistributeStockView.as_view(), name="stock-redistribute"),
     path("dashboard/", DashboardView.as_view(), name="dashboard"),
     path("firm/", FirmSettingsView.as_view(), name="firm-settings"),
     path("settings/", WarehouseSettingsView.as_view(), name="warehouse-settings"),

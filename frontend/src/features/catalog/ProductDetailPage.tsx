@@ -34,7 +34,7 @@ import {
   useCreateVariant, useCreateAttribute, useUpdateAttribute, useReorderAttributes, useDeleteAttribute,
   useCreateAttributeValue, useUpdateAttributeValue, useDeleteAttributeValue, useReorderAttributeValues,
   useProductionRequests, useCreateProductionRequest, useFulfillProductionRequest, useCancelProductionRequest,
-  useWarehouseSettings, useAddStock, useLocations,
+  useWarehouseSettings, useAddStock, useLocations, useRedistributeStock,
 } from "../../api/hooks";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { AddStockDialog } from "../../components/AddStockDialog";
@@ -692,6 +692,41 @@ function VariantManager({
   const [assignValueIds, setAssignValueIds] = useState<Record<string, string>>({});
   const updateVariant = useUpdateVariant(assignDialogVariant?.id ?? "");
 
+  // Redistribute dialog
+  const [redistOpen, setRedistOpen] = useState(false);
+  const [redistDeltas, setRedistDeltas] = useState<Record<string, number>>({});
+  const [redistLocationId, setRedistLocationId] = useState("");
+  const redistribute = useRedistributeStock();
+
+  const openRedistribute = (prefill?: Record<string, number>) => {
+    setRedistDeltas(prefill ?? Object.fromEntries(activeVariants.map((v) => [v.id, 0])));
+    setRedistOpen(true);
+  };
+
+  const redistTotal = Object.values(redistDeltas).reduce((s, n) => s + n, 0);
+
+  const handleRedistribute = async () => {
+    const lines = Object.entries(redistDeltas)
+      .filter(([, delta]) => delta !== 0)
+      .map(([variantId, delta]) => ({ variantId, delta }));
+    if (lines.length === 0 || redistTotal !== 0) return;
+    try {
+      await redistribute.mutateAsync({ locationId: redistLocationId, lines });
+      toast.success(t("variants.redistribute.done"));
+      setRedistOpen(false);
+      // Auto-delete empty default variant
+      const defaultVar = variants.find((v) => v.isDefault && v.attributeValues.length === 0);
+      if (defaultVar) {
+        const defaultDelta = redistDeltas[defaultVar.id] ?? 0;
+        if (defaultVar.totalStock + defaultDelta <= 0) {
+          try { await deleteVariant.mutateAsync(defaultVar.id); } catch { /* has movements, leave it */ }
+        }
+      }
+    } catch {
+      toast.error(t("variants.redistribute.error"));
+    }
+  };
+
   // Batch add stock panel
   const [batchStockOpen, setBatchStockOpen] = useState(false);
   const [batchStockCart, setBatchStockCart] = useState<Record<string, number>>({});
@@ -802,6 +837,15 @@ function VariantManager({
       }
       setGenOpen(false);
       toast.success(t("variants.generateDialog.created_other", { count: newCombinations.length }));
+      // If default variant has stock, prompt to redistribute
+      if (defaultVariant && defaultVariant.totalStock > 0) {
+        const firstLoc = batchLocations?.find((l) =>
+          (defaultVariant.stockByLocation?.[l.id] ?? 0) > 0
+        );
+        setRedistLocationId(firstLoc?.id ?? batchLocations?.[0]?.id ?? "");
+        const prefill: Record<string, number> = { [defaultVariant.id]: -defaultVariant.totalStock };
+        openRedistribute(prefill);
+      }
     } finally {
       setGenCreating(false);
     }
@@ -983,6 +1027,18 @@ function VariantManager({
           >
             {t("variants.batchStock.button")}
           </Button>
+          {activeVariants.length > 1 && (
+            <Button size="small" variant="outlined" onClick={() => {
+              // Auto-select location: use the first location that has stock
+              const firstLoc = batchLocations?.find((l) =>
+                activeVariants.some((v) => (v.stockByLocation?.[l.id] ?? 0) > 0)
+              );
+              setRedistLocationId(firstLoc?.id ?? batchLocations?.[0]?.id ?? "");
+              openRedistribute();
+            }}>
+              {t("variants.redistribute.button")}
+            </Button>
+          )}
           {attributes.length > 0 && attributes.some((a) => a.values.length > 0) && (
             <Button size="small" variant="outlined" onClick={openGenDialog}>
               {t("variants.generateCombinations")}
@@ -1180,6 +1236,76 @@ function VariantManager({
           )}
         </Stack>
       )}
+
+      {/* ── Redistribute dialog ── */}
+      <Dialog open={redistOpen} onClose={() => setRedistOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{t("variants.redistribute.title")}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ mt: 1 }}>
+            {batchLocations && batchLocations.length > 1 && (
+              <FormControl size="small" fullWidth>
+                <InputLabel>{t("common.location")}</InputLabel>
+                <Select label={t("common.location")} value={redistLocationId} onChange={(e) => setRedistLocationId(e.target.value)}>
+                  {batchLocations.map((l) => (
+                    <MenuItem key={l.id} value={l.id}>{l.name}{l.isDefault ? " ★" : ""}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+            {activeVariants.map((v) => {
+              const vLabel = v.isDefault && v.attributeValues.length === 0
+                ? t("common.default")
+                : (variantLabel(v.attributeValues) || productName);
+              const currentStock = redistLocationId
+                ? (v.stockByLocation?.[redistLocationId] ?? 0)
+                : v.totalStock;
+              const delta = redistDeltas[v.id] ?? 0;
+              return (
+                <Stack key={v.id} direction="row" alignItems="center" spacing={1}>
+                  <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>{vLabel}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ minWidth: 24, textAlign: "right" }}>{currentStock}</Typography>
+                  <TextField
+                    size="small" type="number"
+                    value={delta || ""}
+                    placeholder="0"
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      setRedistDeltas((prev) => ({ ...prev, [v.id]: val }));
+                    }}
+                    slotProps={{ htmlInput: { style: { textAlign: "center", padding: "4px 0" } }, inputLabel: { shrink: true } }}
+                    sx={{ width: 72, "& .MuiOutlinedInput-root": { height: 30 } }}
+                  />
+                  <Typography variant="caption" color={currentStock + delta < 0 ? "error.main" : "text.secondary"} sx={{ minWidth: 24 }}>
+                    →{currentStock + delta}
+                  </Typography>
+                </Stack>
+              );
+            })}
+            <Divider />
+            <Typography
+              variant="body2"
+              fontWeight="bold"
+              color={redistTotal === 0 ? "success.main" : "error.main"}
+              textAlign="center"
+            >
+              {redistTotal === 0
+                ? t("variants.redistribute.balanced")
+                : t("variants.redistribute.remaining", { count: Math.abs(redistTotal) })}
+              {redistTotal !== 0 && ` (${redistTotal > 0 ? "+" : ""}${redistTotal})`}
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRedistOpen(false)}>{t("common.cancel")}</Button>
+          <Button
+            variant="contained"
+            disabled={redistTotal !== 0 || redistribute.isPending || !redistLocationId || activeVariants.some((v) => (v.stockByLocation?.[redistLocationId] ?? 0) + (redistDeltas[v.id] ?? 0) < 0)}
+            onClick={handleRedistribute}
+          >
+            {t("variants.redistribute.submit")}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ── Add/Edit Attribute dialog ── */}
       <Dialog open={attrDialog.open} onClose={() => setAttrDialog({ open: false, editing: null })} maxWidth="xs" fullWidth>
