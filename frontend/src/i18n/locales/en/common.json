@@ -156,13 +156,17 @@
       "namePlaceholder": "Name (e.g. Color, Size)",
       "typeText": "Text",
       "typeColor": "Color (shows swatch)",
-      "typeNumber": "Number"
+      "typeNumber": "Number",
+      "colorDefault": "Color"
     },
     "addValueDialog": {
       "editTitle": "Edit Value",
       "addTitle": "Add Value — {{attrName}}",
       "valuePlaceholder": "Value",
       "presetsLabel": "Presets — click to fill",
+      "favorites": "Favorites",
+      "showDefaults": "Show all colors ▾",
+      "hideDefaults": "Hide ▴",
       "hexColor": "Hex color",
       "add": "Add"
     },
@@ -249,7 +253,9 @@
       "balanced": "Balanced",
       "submit": "Redistribute",
       "done": "Stock redistributed",
-      "error": "Redistribution failed"
+      "error": "Redistribution failed",
+      "negativeError": "Some variants would go below 0 stock",
+      "noChanges": "Enter amounts to redistribute"
     },
     "attributeUpdated": "Attribute updated",
     "attributeCreated": "Attribute created",

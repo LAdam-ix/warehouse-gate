@@ -644,6 +644,9 @@ function VariantManager({
   baseCost: string;
 }) {
   const { t } = useTranslation();
+  const { data: wSettings } = useWarehouseSettings();
+  const favoriteColors = wSettings?.favoriteColors ?? [];
+  const [showAllColors, setShowAllColors] = useState(false);
   const createAttr = useCreateAttribute();
   const deleteAttr = useDeleteAttribute();
   const createAttrValue = useCreateAttributeValue();
@@ -1282,28 +1285,47 @@ function VariantManager({
               );
             })}
             <Divider />
-            <Typography
-              variant="body2"
-              fontWeight="bold"
-              color={redistTotal === 0 ? "success.main" : "error.main"}
-              textAlign="center"
-            >
-              {redistTotal === 0
-                ? t("variants.redistribute.balanced")
-                : t("variants.redistribute.remaining", { count: Math.abs(redistTotal) })}
-              {redistTotal !== 0 && ` (${redistTotal > 0 ? "+" : ""}${redistTotal})`}
-            </Typography>
+            {(() => {
+              const hasNegative = activeVariants.some((v) => (v.stockByLocation?.[redistLocationId] ?? 0) + (redistDeltas[v.id] ?? 0) < 0);
+              const isBalanced = redistTotal === 0;
+              const hasChanges = Object.values(redistDeltas).some((d) => d !== 0);
+              return (
+                <Stack spacing={0.5}>
+                  <Typography variant="body2" fontWeight="bold" color={isBalanced ? "success.main" : "error.main"} textAlign="center">
+                    {isBalanced ? t("variants.redistribute.balanced") : t("variants.redistribute.remaining", { count: Math.abs(redistTotal) }) + ` (${redistTotal > 0 ? "+" : ""}${redistTotal})`}
+                  </Typography>
+                  {hasNegative && (
+                    <Typography variant="caption" color="error.main" textAlign="center">
+                      {t("variants.redistribute.negativeError")}
+                    </Typography>
+                  )}
+                  {!hasChanges && (
+                    <Typography variant="caption" color="text.secondary" textAlign="center">
+                      {t("variants.redistribute.noChanges")}
+                    </Typography>
+                  )}
+                </Stack>
+              );
+            })()}
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRedistOpen(false)}>{t("common.cancel")}</Button>
-          <Button
-            variant="contained"
-            disabled={redistTotal !== 0 || redistribute.isPending || !redistLocationId || activeVariants.some((v) => (v.stockByLocation?.[redistLocationId] ?? 0) + (redistDeltas[v.id] ?? 0) < 0)}
-            onClick={handleRedistribute}
-          >
-            {t("variants.redistribute.submit")}
-          </Button>
+          <Tooltip title={
+            redistTotal !== 0 ? t("variants.redistribute.mustSumToZero")
+            : activeVariants.some((v) => (v.stockByLocation?.[redistLocationId] ?? 0) + (redistDeltas[v.id] ?? 0) < 0) ? t("variants.redistribute.negativeError")
+            : ""
+          }>
+            <span>
+              <Button
+                variant="contained"
+                disabled={redistTotal !== 0 || redistribute.isPending || !redistLocationId || !Object.values(redistDeltas).some((d) => d !== 0) || activeVariants.some((v) => (v.stockByLocation?.[redistLocationId] ?? 0) + (redistDeltas[v.id] ?? 0) < 0)}
+                onClick={handleRedistribute}
+              >
+                {t("variants.redistribute.submit")}
+              </Button>
+            </span>
+          </Tooltip>
         </DialogActions>
       </Dialog>
 
@@ -1320,7 +1342,13 @@ function VariantManager({
             />
             <FormControl size="small" fullWidth>
               <InputLabel>{t("common.type")}</InputLabel>
-              <Select label={t("common.type")} value={attrType} onChange={(e) => setAttrType(e.target.value as "text" | "color" | "number")}>
+              <Select label={t("common.type")} value={attrType} onChange={(e) => {
+                const newType = e.target.value as "text" | "color" | "number";
+                setAttrType(newType);
+                if (newType === "color" && !attrName.trim() && !attrDialog.editing) {
+                  setAttrName(t("variants.addAttributeDialog.colorDefault"));
+                }
+              }}>
                 <MenuItem value="text">{t("variants.addAttributeDialog.typeText")}</MenuItem>
                 <MenuItem value="color">{t("variants.addAttributeDialog.typeColor")}</MenuItem>
                 <MenuItem value="number">{t("variants.addAttributeDialog.typeNumber")}</MenuItem>
@@ -1352,27 +1380,72 @@ function VariantManager({
             {valueDialog.attr?.attributeType === "color" && (
               <>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.75, display: "block" }}>
-                    {t("variants.addValueDialog.presetsLabel")}
-                  </Typography>
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-                    {COLOR_PRESETS.map((c) => (
-                      <Tooltip key={c.hex} title={c.name} placement="top">
-                        <Box
-                          onClick={() => { setValueName(c.name); setValueColor(c.hex); }}
-                          sx={{
-                            width: 24, height: 24, borderRadius: "50%",
-                            bgcolor: c.hex,
-                            border: "2px solid",
-                            borderColor: valueColor === c.hex ? "primary.main" : "divider",
-                            cursor: "pointer",
-                            transition: "border-color 0.15s, transform 0.1s",
-                            "&:hover": { transform: "scale(1.2)", borderColor: "primary.main" },
-                          }}
-                        />
-                      </Tooltip>
-                    ))}
-                  </Box>
+                  {favoriteColors.length > 0 ? (
+                    <>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 0.75, display: "block" }}>
+                        {t("variants.addValueDialog.favorites")}
+                      </Typography>
+                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+                        {favoriteColors.map((c) => (
+                          <Tooltip key={c.hex} title={c.name} placement="top">
+                            <Box
+                              onClick={() => { if (!valueName.trim()) setValueName(c.name); setValueColor(c.hex); }}
+                              sx={{
+                                width: 24, height: 24, borderRadius: "50%",
+                                bgcolor: c.hex, border: "2px solid",
+                                borderColor: valueColor === c.hex ? "primary.main" : "divider",
+                                cursor: "pointer", transition: "border-color 0.15s, transform 0.1s",
+                                "&:hover": { transform: "scale(1.2)", borderColor: "primary.main" },
+                              }}
+                            />
+                          </Tooltip>
+                        ))}
+                      </Box>
+                      <Button size="small" sx={{ mt: 0.5, textTransform: "none", fontSize: "0.7rem", p: 0 }} onClick={() => setShowAllColors((v) => !v)}>
+                        {showAllColors ? t("variants.addValueDialog.hideDefaults") : t("variants.addValueDialog.showDefaults")}
+                      </Button>
+                      {showAllColors && (
+                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 0.75 }}>
+                          {COLOR_PRESETS.map((c) => (
+                            <Tooltip key={c.hex} title={c.name} placement="top">
+                              <Box
+                                onClick={() => { if (!valueName.trim()) setValueName(c.name); setValueColor(c.hex); }}
+                                sx={{
+                                  width: 20, height: 20, borderRadius: "50%",
+                                  bgcolor: c.hex, border: "2px solid",
+                                  borderColor: valueColor === c.hex ? "primary.main" : "divider",
+                                  cursor: "pointer", opacity: 0.7,
+                                  "&:hover": { opacity: 1, borderColor: "primary.main" },
+                                }}
+                              />
+                            </Tooltip>
+                          ))}
+                        </Box>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 0.75, display: "block" }}>
+                        {t("variants.addValueDialog.presetsLabel")}
+                      </Typography>
+                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+                        {COLOR_PRESETS.map((c) => (
+                          <Tooltip key={c.hex} title={c.name} placement="top">
+                            <Box
+                              onClick={() => { if (!valueName.trim()) setValueName(c.name); setValueColor(c.hex); }}
+                              sx={{
+                                width: 24, height: 24, borderRadius: "50%",
+                                bgcolor: c.hex, border: "2px solid",
+                                borderColor: valueColor === c.hex ? "primary.main" : "divider",
+                                cursor: "pointer", transition: "border-color 0.15s, transform 0.1s",
+                                "&:hover": { transform: "scale(1.2)", borderColor: "primary.main" },
+                              }}
+                            />
+                          </Tooltip>
+                        ))}
+                      </Box>
+                    </>
+                  )}
                 </Box>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <TextField

@@ -110,6 +110,10 @@ class WarehouseSettings(models.Model):
         default="soft",
         help_text="Stock validation mode: strict blocks negative stock, soft warns, disabled does nothing.",
     )
+    favorite_colors = models.JSONField(
+        default=list, blank=True,
+        help_text='List of {name, hex} objects for the color picker. E.g. [{"name":"Sky Blue","hex":"#87ceeb"}]',
+    )
 
     @classmethod
     def for_firm(cls, firm):
