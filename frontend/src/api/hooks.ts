@@ -485,7 +485,7 @@ export const useSales = (params?: Record<string, unknown>) =>
   useQuery({
     queryKey: ["sales", params],
     queryFn: () => get<PaginatedResponse<Sale>>("/sales/", params),
-    staleTime: 30_000,
+    staleTime: 0,
   });
 
 export const useSale = (id: string) =>
