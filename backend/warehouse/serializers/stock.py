@@ -65,13 +65,24 @@ class StockMovementSerializer(serializers.ModelSerializer):
 
     def get_is_revertable(self, obj):
         from warehouse.services.stock import REVERTABLE_TYPES
+        from warehouse.models import WarehouseSettings
         if obj.movement_type not in REVERTABLE_TYPES:
             return False
-        return not StockMovement.objects.filter(
+        # Must be the latest movement for this variant+location
+        if StockMovement.objects.filter(
             variant=obj.variant,
             location=obj.location,
             created_at__gt=obj.created_at,
-        ).exists()
+        ).exists():
+            return False
+        # In strict mode, check that reverting won't make stock negative
+        firm = obj.variant.product.firm
+        mode = WarehouseSettings.for_firm(firm).warehouse_mode
+        if mode == "strict" and obj.quantity_delta > 0:
+            entry = obj.variant.stock_entries.filter(location=obj.location).first()
+            if entry and entry.quantity < obj.quantity_delta:
+                return False
+        return True
 
 
 class AddStockSerializer(serializers.Serializer):
