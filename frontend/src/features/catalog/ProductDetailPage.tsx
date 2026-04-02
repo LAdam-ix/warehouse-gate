@@ -50,7 +50,7 @@ import { useTranslation } from "react-i18next";
 
 // ─── Color presets ────────────────────────────────────────────────────────────
 
-import { COLOR_PRESETS } from "../../utils/colorPresets";
+import { COLOR_PRESETS, sortByHue } from "../../utils/colorPresets";
 
 // ─── Drag-and-drop photo upload zone ─────────────────────────────────────────
 
@@ -630,10 +630,10 @@ function VariantManager({
   const colorLib = wSettings?.colorLibrary ?? [];
   const hiddenHexes = new Set(colorLib.filter((c) => c.status === "hidden").map((c) => c.hex));
   const dbPresetHexes = new Set(colorLib.filter((c) => c.isPreset).map((c) => c.hex));
-  const favoriteColors = colorLib.filter((c) => c.status === "favorite");
+  const favoriteColors = sortByHue(colorLib.filter((c) => c.status === "favorite"));
   const normalCustom = colorLib.filter((c) => c.status === "normal" && !c.isPreset);
   const visiblePresets = COLOR_PRESETS.filter((c) => !hiddenHexes.has(c.hex) && !dbPresetHexes.has(c.hex));
-  const normalColors = [...normalCustom, ...visiblePresets];
+  const normalColors = sortByHue([...normalCustom, ...visiblePresets]);
   const hasFavorites = favoriteColors.length > 0;
   const [showAllColors, setShowAllColors] = useState(false);
   const createAttr = useCreateAttribute();

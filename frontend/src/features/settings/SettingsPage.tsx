@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { blockNonDecimal } from "../../utils/form";
-import { COLOR_PRESETS } from "../../utils/colorPresets";
+import { COLOR_PRESETS, sortByHue } from "../../utils/colorPresets";
 import {
   Box, Button, CircularProgress, Divider, FormControl, FormControlLabel, IconButton,
   InputLabel, MenuItem, Paper, Select, Stack, Switch, TextField, Tooltip, Typography,
@@ -233,9 +233,9 @@ function ColorManager({
 
   const save = () => { onSave(toSave()); toast.success(t("settings.colorsSaved")); };
 
-  const favorites = list.filter((c) => c.status === "favorite");
-  const normals = list.filter((c) => c.status === "normal");
-  const hiddenList = list.filter((c) => c.status === "hidden");
+  const favorites = sortByHue(list.filter((c) => c.status === "favorite"));
+  const normals = sortByHue(list.filter((c) => c.status === "normal"));
+  const hiddenList = sortByHue(list.filter((c) => c.status === "hidden"));
 
   const renderCircle = (c: ColorEntry, size: number, border: string) => {
     const idx = list.indexOf(c);
