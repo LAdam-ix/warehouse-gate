@@ -183,7 +183,8 @@ function ColorManager({
 
   const cycleStatus = (idx: number) => {
     const c = list[idx];
-    const next = c.status === "favorite" ? "normal" : c.status === "normal" ? "hidden" : "favorite";
+    // Left click: toggle between normal ↔ favorite (hidden colors restore to normal)
+    const next = c.status === "favorite" ? "normal" : "favorite";
     setStatus(idx, next);
   };
 
@@ -240,9 +241,10 @@ function ColorManager({
     const idx = list.indexOf(c);
     const statusIcon = c.status === "favorite" ? "★" : c.status === "hidden" ? "⊘" : "";
     return (
-      <Tooltip key={idx} title={`${c.name} (${c.hex})${statusIcon ? ` ${statusIcon}` : ""} — click: cycle, right-click: edit`} placement="top">
+      <Tooltip key={idx} title={`${c.name} (${c.hex})${statusIcon ? ` ${statusIcon}` : ""} — click: ★, right: edit`} placement="top">
         <Box
           onClick={() => cycleStatus(idx)}
+          onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); setStatus(idx, c.status === "hidden" ? "normal" : "hidden"); } }}
           onContextMenu={(e) => { e.preventDefault(); startEdit(idx); }}
           sx={{
             width: size, height: size, borderRadius: "50%",
