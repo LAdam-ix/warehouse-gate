@@ -289,7 +289,7 @@ export interface RedistributePayload {
 
 export interface Sale {
   id: string;
-  status: "draft" | "finalized" | "voided";
+  status: "draft" | "finalized" | "voided" | "discarded" | "refunded";
   note: string;
   customerLabel: string;
   invoiceId: string | null;
@@ -416,7 +416,7 @@ export interface ProductionRequestFulfill {
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
-export type DashboardPeriod = "week" | "month" | "year" | "all";
+export type DashboardPeriod = "today" | "week" | "month" | "year" | "all" | "custom";
 
 export interface DashboardData {
   period: DashboardPeriod;

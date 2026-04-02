@@ -52,10 +52,17 @@
   "dashboard": {
     "title": "Dashboard",
     "period": {
+      "today": "Today",
       "week": "Week",
       "month": "Month",
       "year": "Year",
+      "all": "All time",
       "allTime": "All time",
+      "custom": "Custom",
+      "customRange": "Custom date range",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
       "thisWeek": "This week",
       "last30Days": "Last 30 days",
       "thisYear": "This year"

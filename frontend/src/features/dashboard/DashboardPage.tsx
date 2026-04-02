@@ -1,8 +1,10 @@
 import { useState } from "react";
 import {
   Box, Card, CardContent, Chip, CircularProgress, Divider,
-  Grid, Stack, ToggleButton, ToggleButtonGroup, Typography,
+  Grid, IconButton, Popover, Stack, TextField, ToggleButton,
+  ToggleButtonGroup, Typography,
 } from "@mui/material";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
@@ -40,15 +42,12 @@ function StatCard({
 export default function DashboardPage() {
   const { t } = useTranslation();
   const [period, setPeriod] = useState<DashboardPeriod>("month");
-  const { data, isLoading } = useDashboard(period);
+  const [dateRange, setDateRange] = useState<{ from: string; to: string } | undefined>();
+  const [rangeAnchor, setRangeAnchor] = useState<HTMLElement | null>(null);
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
+  const { data, isLoading } = useDashboard(period, dateRange);
   const navigate = useNavigate();
-
-  const PERIOD_LABELS: Record<DashboardPeriod, string> = {
-    week: t("dashboard.period.thisWeek"),
-    month: t("dashboard.period.last30Days"),
-    year: t("dashboard.period.thisYear"),
-    all: t("dashboard.period.allTime"),
-  };
 
   if (isLoading) return <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}><CircularProgress /></Box>;
   if (!data) return null;
@@ -68,18 +67,59 @@ export default function DashboardPage() {
     <Stack spacing={3}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
         <Typography variant="h5" fontWeight="bold">{t("dashboard.title")}</Typography>
-        <ToggleButtonGroup
-          size="small"
-          exclusive
-          value={period}
-          onChange={(_, v: DashboardPeriod) => { if (v) setPeriod(v); }}
-        >
-          {(["week", "month", "year", "all"] as DashboardPeriod[]).map((p) => (
-            <ToggleButton key={p} value={p} sx={{ px: 1.5, py: 0.5, fontSize: "0.8rem", textTransform: "none" }}>
-              {p === "week" ? t("dashboard.period.week") : p === "month" ? t("dashboard.period.month") : p === "year" ? t("dashboard.period.year") : t("dashboard.period.allTime")}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={period}
+            onChange={(_, v: DashboardPeriod) => { if (v) { setPeriod(v); setDateRange(undefined); } }}
+          >
+            {(["today", "week", "month", "year", "all"] as DashboardPeriod[]).map((p) => (
+              <ToggleButton key={p} value={p} sx={{ px: 1.5, py: 0.5, fontSize: "0.8rem", textTransform: "none" }}>
+                {t(`dashboard.period.${p}`)}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+          <IconButton
+            size="small"
+            color={period === "custom" ? "primary" : "default"}
+            onClick={(e) => {
+              setRangeFrom(dateRange?.from ?? new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10));
+              setRangeTo(dateRange?.to ?? new Date().toISOString().slice(0, 10));
+              setRangeAnchor(e.currentTarget);
+            }}
+          >
+            <CalendarMonthIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+          <Popover
+            open={!!rangeAnchor}
+            anchorEl={rangeAnchor}
+            onClose={() => setRangeAnchor(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+          >
+            <Stack spacing={1.5} sx={{ p: 2, minWidth: 220 }}>
+              <Typography variant="subtitle2" fontWeight="bold">{t("dashboard.period.customRange")}</Typography>
+              <TextField label={t("dashboard.period.from")} type="date" size="small" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+              <TextField label={t("dashboard.period.to")} type="date" size="small" value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+              <ToggleButton
+                value="apply"
+                selected={false}
+                size="small"
+                sx={{ textTransform: "none" }}
+                onClick={() => {
+                  if (rangeFrom && rangeTo) {
+                    setPeriod("custom");
+                    setDateRange({ from: rangeFrom, to: rangeTo });
+                    setRangeAnchor(null);
+                  }
+                }}
+              >
+                {t("dashboard.period.apply")}
+              </ToggleButton>
+            </Stack>
+          </Popover>
+        </Stack>
       </Stack>
 
       {/* ── Inventory ── */}
@@ -129,7 +169,7 @@ export default function DashboardPage() {
       {/* ── Sales period ── */}
       <Box>
         <Typography variant="overline" color="text.secondary">
-          {t("dashboard.salesPeriod", { period: PERIOD_LABELS[period] })}
+          {t("dashboard.salesPeriod", { period: t(`dashboard.period.${period}`) })}
         </Typography>
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
           <Grid size={{ xs: 6, sm: 3 }}>
@@ -238,7 +278,7 @@ export default function DashboardPage() {
                 <Chip
                   label={s.status}
                   size="small"
-                  color={s.status === "finalized" ? "success" : s.status === "voided" ? "default" : "warning"}
+                  color={s.status === "finalized" ? "success" : s.status === "voided" ? "error" : s.status === "refunded" ? "info" : s.status === "discarded" ? "default" : "warning"}
                 />
                 <Typography variant="body2" noWrap sx={{ flex: 1 }}>{s.note || "—"}</Typography>
                 <Typography variant="body2" fontWeight="bold">€{s.total.toFixed(2)}</Typography>

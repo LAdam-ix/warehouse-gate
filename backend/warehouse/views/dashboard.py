@@ -16,10 +16,15 @@ class DashboardView(APIView):
 
         # --- Period filter ---
         period = request.query_params.get("period", "month")
-        if period not in ("week", "month", "year", "all"):
+        date_from = request.query_params.get("from")
+        date_to = request.query_params.get("to")
+
+        if date_from and date_to:
+            period = "custom"
+        elif period not in ("today", "week", "month", "year", "all"):
             period = "month"
 
-        period_days = {"week": 7, "month": 30, "year": 365}
+        period_days = {"today": 1, "week": 7, "month": 30, "year": 365}
 
         # --- Catalog stats ---
         total_products = Product.objects.filter(firm=firm, is_active=True).count()
@@ -47,7 +52,20 @@ class DashboardView(APIView):
         period_sales_qs = Sale.objects.filter(firm=firm, status=Sale.Status.FINALIZED)
         period_damage_qs = DamageReport.objects.filter(firm=firm)
 
-        if period != "all":
+        if period == "custom" and date_from and date_to:
+            from datetime import datetime as dt
+            try:
+                start = dt.fromisoformat(date_from)
+                end = dt.fromisoformat(date_to).replace(hour=23, minute=59, second=59)
+                period_sales_qs = period_sales_qs.filter(finalized_at__gte=start, finalized_at__lte=end)
+                period_damage_qs = period_damage_qs.filter(report_date__gte=start, report_date__lte=end)
+            except (ValueError, TypeError):
+                pass  # fall through to unfiltered
+        elif period == "today":
+            today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            period_sales_qs = period_sales_qs.filter(finalized_at__gte=today_start)
+            period_damage_qs = period_damage_qs.filter(report_date__gte=today_start)
+        elif period != "all":
             since = timezone.now() - timedelta(days=period_days[period])
             period_sales_qs = period_sales_qs.filter(finalized_at__gte=since)
             period_damage_qs = period_damage_qs.filter(report_date__gte=since)

@@ -55,10 +55,13 @@ export const useUpdateWarehouseSettings = () => {
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
-export const useDashboard = (period: DashboardPeriod = "month") =>
+export const useDashboard = (period: DashboardPeriod = "month", dateRange?: { from: string; to: string }) =>
   useQuery({
-    queryKey: ["dashboard", period],
-    queryFn: () => get<DashboardData>("/dashboard/", { period }),
+    queryKey: ["dashboard", period, dateRange],
+    queryFn: () => get<DashboardData>("/dashboard/", {
+      period,
+      ...(dateRange ? { from: dateRange.from, to: dateRange.to } : {}),
+    }),
   });
 
 // ─── Categories ───────────────────────────────────────────────────────────────
