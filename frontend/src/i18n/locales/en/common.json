@@ -361,6 +361,8 @@
     "discard": "Discard",
     "editDetails": "Edit Details",
     "voidSale": "Void sale (restores stock)",
+    "editNote": "Edit note",
+    "noteUpdated": "Note updated",
     "subtotal": "Subtotal",
     "discounts": "Discounts",
     "discountPercent": "Discount %",

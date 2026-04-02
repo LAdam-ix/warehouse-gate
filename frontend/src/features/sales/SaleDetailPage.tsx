@@ -296,6 +296,8 @@ export default function SaleDetailPage() {
   const navigate = useNavigate();
 
   const [noteValue, setNoteValue] = useState<string | null>(null);
+  const [editNoteOpen, setEditNoteOpen] = useState(false);
+  const [editNoteValue, setEditNoteValue] = useState("");
   const [voidConfirmOpen, setVoidConfirmOpen] = useState(false);
 
   const { data: sale, isLoading } = useSale(saleId!);
@@ -538,13 +540,16 @@ export default function SaleDetailPage() {
       {/* ── Finalized / voided: summary view ── */}
       {!isDraft && (
         <>
-          {sale.status === "finalized" && (
-            <Stack direction="row" spacing={1}>
+          <Stack direction="row" spacing={1}>
+            <Button variant="outlined" size="small" onClick={() => { setEditNoteValue(sale.note ?? ""); setEditNoteOpen(true); }}>
+              {t("sales.editNote")}
+            </Button>
+            {sale.status === "finalized" && (
               <Button variant="outlined" color="error" startIcon={<CancelIcon />} onClick={() => setVoidConfirmOpen(true)}>
                 {t("sales.voidSale")}
               </Button>
-            </Stack>
-          )}
+            )}
+          </Stack>
 
           <Grid container spacing={2}>
             {sale.note && (
@@ -592,6 +597,26 @@ export default function SaleDetailPage() {
       )}
 
       {/* Void / discard confirmation */}
+      <Dialog open={editNoteOpen} onClose={() => setEditNoteOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{t("sales.editNote")}</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus fullWidth multiline rows={3} size="small"
+            value={editNoteValue}
+            onChange={(e) => setEditNoteValue(e.target.value)}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditNoteOpen(false)}>{t("common.cancel")}</Button>
+          <Button variant="contained" disabled={updateSale.isPending} onClick={async () => {
+            await updateSale.mutateAsync({ note: editNoteValue } as Partial<SaleWrite>);
+            setEditNoteOpen(false);
+            toast.success(t("sales.noteUpdated"));
+          }}>{t("common.save")}</Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={voidConfirmOpen} onClose={() => setVoidConfirmOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>
           {sale.status === "finalized" ? t("sales.voidDialog.voidFinalizedTitle") : t("sales.voidDialog.discardTitle")}
