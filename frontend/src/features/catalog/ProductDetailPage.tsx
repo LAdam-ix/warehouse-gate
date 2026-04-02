@@ -829,14 +829,26 @@ function VariantManager({
     if (!attr) return;
     const isColor = attr.attributeType === "color";
     const deltas = { priceDelta: valuePriceDelta || "0", costDelta: valueCostDelta || "0", weightDelta: valueWeightDelta || "0" };
-    if (editing) {
-      await updateAttrValue.mutateAsync({ value: valueName, colorHex: isColor ? (valueColor || null) : null, ...deltas });
-      toast.success(t("variants.valueUpdated"));
-    } else {
-      await createAttrValue.mutateAsync({ value: valueName, colorHex: isColor ? (valueColor || null) : null, sortOrder: attr.values.length, attribute: attr.id, ...deltas });
-      toast.success(t("variants.valueAdded"));
+    // Check for duplicate value name
+    const isDuplicate = attr.values.some((v) =>
+      v.value.toLowerCase() === valueName.trim().toLowerCase() && v.id !== editing?.id
+    );
+    if (isDuplicate) {
+      toast.error(t("variants.valueDuplicate", { name: valueName.trim() }));
+      return;
     }
-    setValueDialog({ attr: null, editing: null });
+    try {
+      if (editing) {
+        await updateAttrValue.mutateAsync({ value: valueName, colorHex: isColor ? (valueColor || null) : null, ...deltas });
+        toast.success(t("variants.valueUpdated"));
+      } else {
+        await createAttrValue.mutateAsync({ value: valueName, colorHex: isColor ? (valueColor || null) : null, sortOrder: attr.values.length, attribute: attr.id, ...deltas });
+        toast.success(t("variants.valueAdded"));
+      }
+      setValueDialog({ attr: null, editing: null });
+    } catch {
+      // Global error handler shows the toast, but if it's a unique constraint, be specific
+    }
   };
 
   const handleCreateVariant = async () => {

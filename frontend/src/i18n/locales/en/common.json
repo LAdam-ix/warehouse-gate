@@ -241,6 +241,7 @@
     "deleteAttributeTitle": "Delete Attribute",
     "valueUpdated": "Value updated",
     "valueAdded": "Value added",
+    "valueDuplicate": "Value \"{{name}}\" already exists for this attribute",
     "valueDeleted": "Value deleted",
     "deleteValueConfirm": "Delete value \"{{value}}\"?",
     "deleteValueTitle": "Delete Value",
