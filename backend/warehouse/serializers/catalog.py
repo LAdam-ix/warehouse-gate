@@ -102,8 +102,8 @@ class ProductVariantSerializer(serializers.ModelSerializer):
     )
 
     def get_stock_by_location(self, obj):
-        """Returns {location_id: quantity} for entries with stock > 0."""
-        entries = obj.stock_entries.filter(quantity__gt=0).select_related("location")
+        """Returns {location_id: quantity} for entries with non-zero stock."""
+        entries = obj.stock_entries.exclude(quantity=0).select_related("location")
         return {str(e.location_id): e.quantity for e in entries}
 
     def get_attribute_values(self, obj):

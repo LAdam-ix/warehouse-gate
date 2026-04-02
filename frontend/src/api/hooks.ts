@@ -104,6 +104,7 @@ export const useProducts = (params?: Record<string, unknown>) =>
   useQuery({
     queryKey: ["products", params],
     queryFn: () => get<PaginatedResponse<Product>>("/products/", params),
+    staleTime: 30_000,
   });
 
 export const useProduct = (id: string) =>

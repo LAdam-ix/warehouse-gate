@@ -38,7 +38,16 @@ def finalize_sale(sale: Sale, user=None) -> Sale:
     sale_batch_id = uuid.uuid4()
     for line in lines:
         if line.variant and line.variant.product.item_type == "physical":
-            location = line.location or _get_default_location(firm)
+            location = line.location
+            if not location:
+                # Auto-resolve: use the location where the variant actually has stock
+                from warehouse.models import StockEntry
+                stock_entry = (
+                    StockEntry.objects.filter(variant=line.variant, quantity__gt=0)
+                    .order_by("-quantity")
+                    .first()
+                )
+                location = stock_entry.location if stock_entry else _get_default_location(firm)
             if location:
                 qty = int(line.quantity)
                 if qty > 0:

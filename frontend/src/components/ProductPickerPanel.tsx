@@ -27,37 +27,41 @@ export function StockChips({ variant, locations, chipColor, onLocationClick }: {
   chipColor?: "default" | "error" | "warning" | "success";
   onLocationClick?: (locationId: string) => void;
 }) {
-  const locsWithStock = locations.filter((loc) => (variant.stockByLocation?.[loc.id] ?? 0) > 0);
-  const actualTotal = locsWithStock.reduce((s, loc) => s + (variant.stockByLocation?.[loc.id] ?? 0), 0);
-  const displayTotal = actualTotal || variant.totalStock;
-  const color = chipColor ?? (displayTotal === 0 ? "error" : "default");
-  if (displayTotal === 0 || locsWithStock.length === 0) {
-    return <Chip label={`${displayTotal}`} size="small" color={displayTotal === 0 ? "error" : color} variant="outlined" />;
+  const locsWithStock = locations.filter((loc) => (variant.stockByLocation?.[loc.id] ?? 0) !== 0);
+  const displayTotal = variant.totalStock;
+  const color = chipColor ?? (displayTotal <= 0 ? "error" : "default");
+  if (displayTotal === 0 && locsWithStock.length === 0) {
+    return <Chip label="0" size="small" color="error" variant="outlined" />;
   }
   const clickProps = (locId: string) => onLocationClick ? {
     onClick: (e: React.MouseEvent) => { e.stopPropagation(); onLocationClick(locId); },
     sx: { cursor: "pointer", "&:hover": { borderColor: "primary.main" } },
   } : {};
+  const chipColor_ = (qty: number) => qty < 0 ? "error" : qty === 0 ? "default" : color;
   if (locsWithStock.length === 0 || locsWithStock.length > 5) {
     return (
-      <Chip label={`${variant.totalStock}`} size="small" color={color} variant="outlined" />
+      <Chip label={`${displayTotal}`} size="small" color={color} variant="outlined" />
     );
   }
   if (locsWithStock.length === 1) {
+    const qty = variant.stockByLocation![locsWithStock[0].id];
     return (
-      <Chip label={`${locsWithStock[0].name}: ${variant.stockByLocation![locsWithStock[0].id]}`}
-        size="small" color={color} variant="outlined" {...clickProps(locsWithStock[0].id)} />
+      <Chip label={`${locsWithStock[0].name}: ${qty}`}
+        size="small" color={chipColor_(qty)} variant="outlined" {...clickProps(locsWithStock[0].id)} />
     );
   }
   return (
     <Stack direction="row" spacing={0.25} flexWrap="wrap">
-      {locsWithStock.map((loc) => (
-        <Chip key={loc.id} label={`${loc.name}: ${variant.stockByLocation![loc.id]}`}
-          size="small" color={color} variant="outlined" sx={{ fontSize: "0.65rem", height: 20, ...(onLocationClick ? { cursor: "pointer", "&:hover": { borderColor: "primary.main" } } : {}) }}
-          {...(onLocationClick ? { onClick: (e: React.MouseEvent) => { e.stopPropagation(); onLocationClick(loc.id); } } : {})} />
-      ))}
+      {locsWithStock.map((loc) => {
+        const qty = variant.stockByLocation![loc.id];
+        return (
+          <Chip key={loc.id} label={`${loc.name}: ${qty}`}
+            size="small" color={chipColor_(qty)} variant="outlined" sx={{ fontSize: "0.65rem", height: 20, ...(onLocationClick ? { cursor: "pointer", "&:hover": { borderColor: "primary.main" } } : {}) }}
+            {...(onLocationClick ? { onClick: (e: React.MouseEvent) => { e.stopPropagation(); onLocationClick(loc.id); } } : {})} />
+        );
+      })}
       {locsWithStock.length > 1 && (
-        <Chip label={`Σ ${variant.totalStock}`} size="small" color={color} sx={{ fontSize: "0.65rem", height: 20 }} />
+        <Chip label={`Σ ${displayTotal}`} size="small" color={color} sx={{ fontSize: "0.65rem", height: 20 }} />
       )}
     </Stack>
   );

@@ -326,12 +326,15 @@ export default function SaleDetailPage() {
     if (addLine.isPending) return;
     const isHourly = product.servicePricing === "hourly";
     const price = (isHourly && product.hourlyRate) ? product.hourlyRate : (variant.effectivePrice ?? "0.00");
+    // Auto-select location where variant has stock, fall back to default
+    const stockLocs = Object.entries(variant.stockByLocation ?? {}).filter(([, q]) => q > 0);
+    const autoLocation = stockLocs.length === 1 ? stockLocs[0][0] : defaultLocationId;
     await addLine.mutateAsync({
       variant: variant.id,
       description: label,
       ...(isHourly ? { hours: String(qty) } : { quantity: String(qty) }),
       unitPrice: price,
-      location: defaultLocationId,
+      location: autoLocation,
       discountAmount: "0",
       discountNote: "",
     });
