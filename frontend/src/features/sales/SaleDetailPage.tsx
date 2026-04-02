@@ -541,14 +541,14 @@ export default function SaleDetailPage() {
       {!isDraft && (
         <>
           <Stack direction="row" spacing={1}>
-            <Button variant="outlined" size="small" onClick={() => { setEditNoteValue(sale.note ?? ""); setEditNoteOpen(true); }}>
-              {t("sales.editNote")}
-            </Button>
             {sale.status === "finalized" && (
               <Button variant="outlined" color="error" startIcon={<CancelIcon />} onClick={() => setVoidConfirmOpen(true)}>
                 {t("sales.voidSale")}
               </Button>
             )}
+            <Button variant="outlined" size="small" onClick={() => { setEditNoteValue(sale.note ?? ""); setEditNoteOpen(true); }}>
+              {t("sales.editNote")}
+            </Button>
           </Stack>
 
           <Grid container spacing={2}>
