@@ -134,6 +134,8 @@ function EnergyRateField({ value, onSave, disabled }: { value: string | null; on
 
 // ─── Color Manager ────────────────────────────────────────────────────────────
 
+type ColorEntry = { name: string; hex: string; favorite: boolean; isPreset?: boolean; hidden?: boolean };
+
 function ColorManager({
   colors,
   hiddenPresets,
@@ -146,40 +148,73 @@ function ColorManager({
   disabled: boolean;
 }) {
   const { t } = useTranslation();
-  const [localColors, setLocalColors] = useState(colors);
-  const [localHidden, setLocalHidden] = useState(hiddenPresets);
+
+  // Build unified list: custom colors + presets (presets that aren't already in custom)
+  const buildList = (): ColorEntry[] => {
+    const customHexes = new Set(colors.map((c) => c.hex));
+    const presetEntries: ColorEntry[] = COLOR_PRESETS
+      .filter((p) => !customHexes.has(p.hex))
+      .map((p) => ({ ...p, favorite: false, isPreset: true, hidden: hiddenPresets.includes(p.hex) }));
+    const customEntries: ColorEntry[] = colors.map((c) => ({ ...c, isPreset: false, hidden: false }));
+    return [...customEntries, ...presetEntries];
+  };
+
+  const [list, setList] = useState<ColorEntry[]>(buildList);
   const [newName, setNewName] = useState("");
   const [newHex, setNewHex] = useState("#42a5f5");
-  const [showPresets, setShowPresets] = useState(false);
 
-  useEffect(() => { setLocalColors(colors); }, [colors]);
-  useEffect(() => { setLocalHidden(hiddenPresets); }, [hiddenPresets]);
+  useEffect(() => { setList(buildList()); }, [colors, hiddenPresets]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isDirty = JSON.stringify(localColors) !== JSON.stringify(colors) || JSON.stringify(localHidden) !== JSON.stringify(hiddenPresets);
+  const isDirty = (() => {
+    const customNow = list.filter((c) => !c.isPreset);
+    const hiddenNow = list.filter((c) => c.isPreset && c.hidden).map((c) => c.hex);
+    const favPresets = list.filter((c) => c.isPreset && c.favorite);
+    return JSON.stringify(customNow.map(({ name, hex, favorite }) => ({ name, hex, favorite }))) !== JSON.stringify(colors)
+      || JSON.stringify(hiddenNow) !== JSON.stringify(hiddenPresets)
+      || favPresets.length > 0; // favorited presets need to be copied to custom
+  })();
+
+  const toggleFavorite = (idx: number) => {
+    setList((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], favorite: !next[idx].favorite };
+      // If favoriting a preset, convert it to custom
+      if (next[idx].isPreset && next[idx].favorite) {
+        next[idx] = { ...next[idx], isPreset: false, hidden: false };
+      }
+      return next;
+    });
+  };
+
+  const toggleHidden = (idx: number) => {
+    setList((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], hidden: !next[idx].hidden };
+      return next;
+    });
+  };
+
+  const removeColor = (idx: number) => {
+    setList((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const addColor = () => {
     if (!newName.trim() || !newHex) return;
-    const updated = [...localColors, { name: newName.trim(), hex: newHex, favorite: true }];
-    setLocalColors(updated);
+    setList((prev) => [...prev, { name: newName.trim(), hex: newHex, favorite: true, isPreset: false, hidden: false }]);
     setNewName("");
     setNewHex("#42a5f5");
   };
 
-  const toggleFavorite = (idx: number) => {
-    const updated = [...localColors];
-    updated[idx] = { ...updated[idx], favorite: !updated[idx].favorite };
-    setLocalColors(updated);
+  const save = () => {
+    const customColors = list.filter((c) => !c.isPreset).map(({ name, hex, favorite }) => ({ name, hex, favorite }));
+    const hidden = list.filter((c) => c.isPreset && c.hidden).map((c) => c.hex);
+    onSave(customColors, hidden);
+    toast.success(t("settings.colorsSaved"));
   };
 
-  const removeColor = (idx: number) => {
-    setLocalColors((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const togglePresetHidden = (hex: string) => {
-    setLocalHidden((prev) => prev.includes(hex) ? prev.filter((h) => h !== hex) : [...prev, hex]);
-  };
-
-  const save = () => { onSave(localColors, localHidden); toast.success(t("settings.colorsSaved")); };
+  const favorites = list.filter((c) => c.favorite && !c.hidden);
+  const others = list.filter((c) => !c.favorite && !c.hidden);
+  const hidden = list.filter((c) => c.hidden);
 
   return (
     <Box>
@@ -188,25 +223,81 @@ function ColorManager({
         {t("settings.colorLibraryDescription")}
       </Typography>
 
-      {/* Custom colors */}
-      <Stack spacing={0.5} sx={{ mb: 1.5 }}>
-        {localColors.map((c, i) => (
-          <Stack key={i} direction="row" alignItems="center" spacing={1}>
-            <Box sx={{ width: 20, height: 20, borderRadius: "50%", bgcolor: c.hex, border: "1px solid", borderColor: "divider", flexShrink: 0 }} />
-            <Typography variant="body2" sx={{ flex: 1 }}>{c.name}</Typography>
-            <Typography variant="caption" color="text.secondary">{c.hex}</Typography>
-            <IconButton size="small" onClick={() => toggleFavorite(i)}>
-              {c.favorite ? <StarIcon sx={{ fontSize: 16, color: "#f59e0b" }} /> : <StarBorderIcon sx={{ fontSize: 16 }} />}
-            </IconButton>
-            <IconButton size="small" onClick={() => removeColor(i)}>
-              <DeleteIcon sx={{ fontSize: 16 }} />
-            </IconButton>
-          </Stack>
-        ))}
-      </Stack>
+      {/* Favorites — compact circles with star border */}
+      {favorites.length > 0 && (
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block" }}>{t("settings.favoriteColorsLabel")}</Typography>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+            {favorites.map((c) => {
+              const idx = list.indexOf(c);
+              return (
+                <Tooltip key={idx} title={`${c.name} (${c.hex}) — click to unfavorite${c.isPreset ? "" : ", right-click to delete"}`} placement="top">
+                  <Box
+                    onClick={() => toggleFavorite(idx)}
+                    onContextMenu={(e) => { if (!c.isPreset) { e.preventDefault(); removeColor(idx); } }}
+                    sx={{
+                      width: 26, height: 26, borderRadius: "50%",
+                      bgcolor: c.hex, border: "2px solid", borderColor: "#f59e0b",
+                      cursor: "pointer",
+                      "&:hover": { transform: "scale(1.15)" },
+                      transition: "transform 0.1s",
+                    }}
+                  />
+                </Tooltip>
+              );
+            })}
+          </Box>
+        </Box>
+      )}
 
-      {/* Add new color */}
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
+      {/* Others — compact circles */}
+      {others.length > 0 && (
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block" }}>{t("settings.otherColorsLabel")}</Typography>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+            {others.map((c) => {
+              const idx = list.indexOf(c);
+              return (
+                <Tooltip key={idx} title={`${c.name} — click to favorite${c.isPreset ? ", right-click to hide" : ", right-click to delete"}`} placement="top">
+                  <Box
+                    onClick={() => toggleFavorite(idx)}
+                    onContextMenu={(e) => { e.preventDefault(); c.isPreset ? toggleHidden(idx) : removeColor(idx); }}
+                    sx={{
+                      width: 22, height: 22, borderRadius: "50%",
+                      bgcolor: c.hex, border: "2px solid", borderColor: "divider",
+                      cursor: "pointer",
+                      "&:hover": { borderColor: "primary.main" },
+                    }}
+                  />
+                </Tooltip>
+              );
+            })}
+          </Box>
+        </Box>
+      )}
+
+      {hidden.length > 0 && (
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: "block" }}>{t("settings.hiddenColorsLabel")}</Typography>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+            {hidden.map((c) => {
+              const idx = list.indexOf(c);
+              return (
+                <Tooltip key={idx} title={`${c.name} (hidden) — click to restore`} placement="top">
+                  <Box onClick={() => toggleHidden(idx)} sx={{
+                    width: 18, height: 18, borderRadius: "50%",
+                    bgcolor: c.hex, border: "2px solid", borderColor: "error.light",
+                    opacity: 0.4, cursor: "pointer", "&:hover": { opacity: 0.8 },
+                  }} />
+                </Tooltip>
+              );
+            })}
+          </Box>
+        </Box>
+      )}
+
+      {/* Add new + save */}
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
         <Box sx={{ position: "relative", flexShrink: 0 }}>
           <Box
             component="input" type="color" value={newHex}
@@ -221,37 +312,15 @@ function ColorManager({
         </Button>
       </Stack>
 
-      {/* Default presets — toggle visibility */}
-      <Button size="small" sx={{ textTransform: "none", fontSize: "0.75rem", p: 0, mb: 0.5 }} onClick={() => setShowPresets((v) => !v)}>
-        {showPresets ? t("settings.hidePresets") : t("settings.managePresets")}
-      </Button>
-      {showPresets && (
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 1.5 }}>
-          {COLOR_PRESETS.map((c) => {
-            const hidden = localHidden.includes(c.hex);
-            return (
-              <Tooltip key={c.hex} title={`${c.name}${hidden ? " (hidden)" : ""}`} placement="top">
-                <Box
-                  onClick={() => togglePresetHidden(c.hex)}
-                  sx={{
-                    width: 22, height: 22, borderRadius: "50%",
-                    bgcolor: c.hex, border: "2px solid",
-                    borderColor: hidden ? "error.main" : "divider",
-                    opacity: hidden ? 0.3 : 1,
-                    cursor: "pointer",
-                    "&:hover": { opacity: 1 },
-                  }}
-                />
-              </Tooltip>
-            );
-          })}
-        </Box>
-      )}
+      {/* Hide colors — right-click or shift-click on "other" colors could hide them,
+          but for simplicity: show a small "hide" icon on hover for non-favorite colors */}
 
       {isDirty && (
-        <Button size="small" variant="contained" onClick={save} disabled={disabled}>
-          {t("settings.saveColors")}
-        </Button>
+        <Stack direction="row" justifyContent="flex-end">
+          <Button size="small" variant="contained" onClick={save} disabled={disabled}>
+            {t("settings.saveColors")}
+          </Button>
+        </Stack>
       )}
     </Box>
   );
