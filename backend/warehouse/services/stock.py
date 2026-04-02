@@ -93,6 +93,7 @@ def deduct_stock(
     movement_date=None,
     user=None,
     sale_line=None,
+    batch_id=None,
 ) -> StockMovement:
     """
     Remove stock. Checks firm's warehouse_mode before deducting.
@@ -117,6 +118,7 @@ def deduct_stock(
         movement_date=movement_date or timezone.now(),
         created_by=user,
         sale_line=sale_line,
+        batch_id=batch_id or uuid.uuid4(),
     )
     return movement
 
@@ -132,6 +134,7 @@ def return_stock(
     user=None,
     sale_line=None,
     movement_type: str = StockMovement.MovementType.RETURNED,
+    batch_id=None,
 ) -> StockMovement:
     """Return items to stock (from voided sale or refund)."""
     if quantity <= 0:
@@ -150,6 +153,7 @@ def return_stock(
         movement_date=movement_date or timezone.now(),
         created_by=user,
         sale_line=sale_line,
+        batch_id=batch_id or uuid.uuid4(),
     )
     return movement
 

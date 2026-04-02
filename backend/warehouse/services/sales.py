@@ -2,6 +2,7 @@
 Sale service — finalize, void, and credit-note handling.
 All stock side-effects triggered here.
 """
+import uuid
 from django.db import transaction
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -34,6 +35,7 @@ def finalize_sale(sale: Sale, user=None) -> Sale:
     if not lines.exists():
         raise ValidationError("Cannot finalize an empty sale.")
 
+    sale_batch_id = uuid.uuid4()
     for line in lines:
         if line.variant and line.variant.product.item_type == "physical":
             location = line.location or _get_default_location(firm)
@@ -49,6 +51,7 @@ def finalize_sale(sale: Sale, user=None) -> Sale:
                             note=f"Sale {sale.id}",
                             user=user,
                             sale_line=line,
+                            batch_id=sale_batch_id,
                         )
                     except InsufficientStockError as e:
                         raise ValidationError(str(e))
@@ -82,6 +85,7 @@ def void_sale(sale: Sale, user=None) -> Sale:
 
     if was_finalized:
         firm = sale.firm
+        void_batch_id = uuid.uuid4()
         lines = sale.lines.select_related("variant__product", "location").all()
         for line in lines:
             if line.variant and line.variant.product.item_type == "physical":
@@ -97,6 +101,7 @@ def void_sale(sale: Sale, user=None) -> Sale:
                             note=f"Voided sale {sale.id}",
                             user=user,
                             sale_line=line,
+                            batch_id=void_batch_id,
                         )
 
     sale.status = Sale.Status.VOIDED
@@ -115,6 +120,7 @@ def apply_credit_note(sale: Sale, credit_note_id, user=None) -> Sale:
         raise ValidationError("Credit notes can only be applied to finalized sales.")
 
     firm = sale.firm
+    credit_batch_id = uuid.uuid4()
     lines = sale.lines.select_related("variant__product", "location").all()
     for line in lines:
         if line.variant and line.variant.product.item_type == "physical":
@@ -130,6 +136,7 @@ def apply_credit_note(sale: Sale, credit_note_id, user=None) -> Sale:
                         note=f"Credit note {credit_note_id} for sale {sale.id}",
                         user=user,
                         sale_line=line,
+                        batch_id=credit_batch_id,
                     )
 
     sale.credit_note_id = credit_note_id
