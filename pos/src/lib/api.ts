@@ -73,7 +73,6 @@ export async function fetchProducts(): Promise<ApiProductDetail[]> {
   const details: ApiProductDetail[] = [];
   for (const p of list.results) {
     const detail = await fetchJson<ApiProductDetail>(`/products/${p.id}/`);
-    // Fix photo URLs to be relative paths
     detail.primaryPhoto = fixUrl(detail.primaryPhoto);
     for (const v of detail.variants) {
       v.galleryPhotoUrl = fixUrl(v.galleryPhotoUrl);

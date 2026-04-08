@@ -218,6 +218,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     """Full serializer for detail/create/update views."""
     cost = ProductCostSerializer(required=False)
     photos = ProductPhotoSerializer(many=True, read_only=True)
+    primary_photo = serializers.SerializerMethodField()
     attributes = VariantAttributeSerializer(many=True, read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
     category_names = serializers.SerializerMethodField()
@@ -244,12 +245,20 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             "is_active",
             "cost",
             "photos",
+            "primary_photo",
             "attributes",
             "variants",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+    def get_primary_photo(self, obj):
+        photo = obj.photos.filter(is_primary=True).first() or obj.photos.first()
+        if photo:
+            request = self.context.get("request")
+            return request.build_absolute_uri(photo.image.url) if request else photo.image.url
+        return None
 
     def get_category_names(self, obj):
         return list(obj.categories.values_list("name", flat=True))
