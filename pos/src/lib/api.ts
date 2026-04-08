@@ -5,11 +5,18 @@
 
 const BASE = "/api/v1";
 
+let _apiToken = "";
+export function setApiToken(token: string) { _apiToken = token; }
+
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(BASE + url, {
-    headers: { "Content-Type": "application/json", ...init?.headers },
-    ...init,
-  });
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...init?.headers as Record<string, string>,
+  };
+  if (_apiToken) {
+    headers["Authorization"] = `PosToken ${_apiToken}`;
+  }
+  const res = await fetch(BASE + url, { ...init, headers });
   if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
   return res.json();
 }
@@ -96,11 +103,16 @@ interface SaleLinePayload {
 export async function pushSale(sale: {
   lines: SaleLinePayload[];
   note: string;
+  deviceCreatedAt: string;
 }): Promise<{ id: string }> {
-  // Create sale
+  // Create sale with POS source
   const created = await fetchJson<{ id: string }>("/sales/", {
     method: "POST",
-    body: JSON.stringify({ note: sale.note || undefined }),
+    body: JSON.stringify({
+      note: sale.note || undefined,
+      source: "pos",
+      deviceCreatedAt: sale.deviceCreatedAt,
+    }),
   });
 
   // Add lines
@@ -111,8 +123,8 @@ export async function pushSale(sale: {
     });
   }
 
-  // Finalize immediately — POS sales are completed transactions
-  await fetchJson(`/sales/${created.id}/finalize/`, { method: "POST" });
+  // POS-finalize: deducts stock but sets status to pending_review (editable for 5 days)
+  await fetchJson(`/sales/${created.id}/pos-finalize/`, { method: "POST" });
 
   return created;
 }

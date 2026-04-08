@@ -34,6 +34,7 @@ export interface WarehouseSettings {
   warehouseMode: "strict" | "soft" | "disabled";
   /** Unified color library. Stores custom colors + state overrides for presets. */
   colorLibrary: { name: string; hex: string; status: "favorite" | "normal" | "hidden"; isPreset: boolean }[];
+  posApiToken: string;
 }
 
 export type WarehouseSettingsUpdate = Partial<WarehouseSettings>;
@@ -291,11 +292,14 @@ export interface RedistributePayload {
 
 export interface Sale {
   id: string;
-  status: "draft" | "finalized" | "voided" | "discarded" | "refunded";
+  status: "draft" | "pending_review" | "finalized" | "voided" | "discarded" | "refunded";
+  source: string;
   note: string;
   customerLabel: string;
   invoiceId: string | null;
   creditNoteId: string | null;
+  deviceCreatedAt: string | null;
+  autoConfirmAt: string | null;
   discountPercentage: string;
   discountFixed: string;
   finalizedAt: string | null;

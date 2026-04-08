@@ -540,6 +540,43 @@ export function WarehouseSettings() {
 
       <LocationsSettings />
 
+      {/* POS Terminal */}
+      <Box>
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>{t("settings.pos.title")}</Typography>
+        <Paper variant="outlined" sx={{ p: 2 }}>
+          <Stack spacing={2}>
+            <Typography variant="body2" color="text.secondary">
+              {t("settings.pos.description")}
+            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <TextField
+                label={t("settings.pos.tokenLabel")}
+                size="small"
+                fullWidth
+                value={wSettings?.posApiToken ?? ""}
+                onChange={(e) => updateWSettings.mutate({ posApiToken: e.target.value })}
+                placeholder={t("settings.pos.tokenPlaceholder")}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                sx={{ whiteSpace: "nowrap" }}
+                onClick={() => {
+                  const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+                  updateWSettings.mutate({ posApiToken: token });
+                }}
+              >
+                {t("settings.pos.generate")}
+              </Button>
+            </Stack>
+            <Typography variant="caption" color="text.secondary">
+              {t("settings.pos.tokenHelp")}
+            </Typography>
+          </Stack>
+        </Paper>
+      </Box>
+
       <Box>
         <Typography variant="subtitle1" fontWeight="bold" gutterBottom>{t("settings.quickAddStock")}</Typography>
         <Paper variant="outlined" sx={{ p: 2 }}>

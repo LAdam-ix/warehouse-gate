@@ -34,20 +34,22 @@ class SaleViewSet(FirmScopedMixin, viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         sale = self.get_object()
-        if sale.status != Sale.Status.DRAFT:
+        editable = {Sale.Status.DRAFT, Sale.Status.PENDING_REVIEW}
+        if sale.status not in editable:
             # Allow editing note on finalized/voided sales
             non_note_fields = set(request.data.keys()) - {"note"}
             if non_note_fields:
                 return Response(
-                    {"detail": "Only draft sales can be edited."},
+                    {"detail": "Only draft or pending review sales can be edited."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
         return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
         sale = serializer.save(updated_by=self.get_user())
-        sale.recalculate_totals()
-        sale.save()
+        if sale.status in (Sale.Status.DRAFT, Sale.Status.PENDING_REVIEW):
+            sale.recalculate_totals()
+            sale.save()
 
     @action(detail=True, methods=["post"])
     def finalize(self, request, pk=None):
@@ -81,6 +83,40 @@ class SaleViewSet(FirmScopedMixin, viewsets.ModelViewSet):
             sale = apply_credit_note(sale, credit_note_id, user=self.get_user())
         except ValidationError as e:
             return Response({"detail": str(e)}, status=400)
+        return Response(SaleSerializer(sale, context={"request": request}).data)
+
+    @action(detail=True, methods=["post"], url_path="pos-finalize")
+    def pos_finalize(self, request, pk=None):
+        """
+        Finalize a sale from POS terminal — deducts stock but sets status to
+        pending_review instead of finalized. Auto-confirms after 5 days.
+        Requires valid POS token (currently bypassed for dev).
+        """
+        from datetime import timedelta
+        from django.utils import timezone
+        from warehouse.auth import verify_pos_token
+        if not verify_pos_token(request):
+            return Response({"detail": "Invalid POS token."}, status=status.HTTP_403_FORBIDDEN)
+        sale = self.get_object()
+        try:
+            sale = finalize_sale(sale, user=self.get_user())
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=400)
+        # Override status to pending_review
+        sale.status = Sale.Status.PENDING_REVIEW
+        sale.auto_confirm_at = timezone.now() + timedelta(days=5)
+        sale.save(update_fields=["status", "auto_confirm_at"])
+        return Response(SaleSerializer(sale, context={"request": request}).data)
+
+    @action(detail=True, methods=["post"])
+    def confirm(self, request, pk=None):
+        """Manually confirm a pending_review sale → finalized."""
+        sale = self.get_object()
+        if sale.status != Sale.Status.PENDING_REVIEW:
+            return Response({"detail": "Only pending_review sales can be confirmed."}, status=400)
+        sale.status = Sale.Status.FINALIZED
+        sale.auto_confirm_at = None
+        sale.save(update_fields=["status", "auto_confirm_at"])
         return Response(SaleSerializer(sale, context={"request": request}).data)
 
     @action(detail=True, methods=["post"], url_path="recalculate")
@@ -119,9 +155,9 @@ class SaleLineViewSet(FirmScopedMixin, viewsets.ModelViewSet):
         if not sale:
             from rest_framework.exceptions import NotFound
             raise NotFound("Sale not found.")
-        if sale.status != Sale.Status.DRAFT:
+        if sale.status not in (Sale.Status.DRAFT, Sale.Status.PENDING_REVIEW):
             from rest_framework.exceptions import ValidationError
-            raise ValidationError("Cannot add lines to a non-draft sale.")
+            raise ValidationError("Cannot add lines to this sale.")
         line = serializer.save(
             sale=sale,
             created_by=self.get_user(),
@@ -134,13 +170,13 @@ class SaleLineViewSet(FirmScopedMixin, viewsets.ModelViewSet):
     def perform_update(self, serializer):
         line = serializer.save(updated_by=self.get_user())
         sale = line.sale
-        if sale.status == Sale.Status.DRAFT:
+        if sale.status in (Sale.Status.DRAFT, Sale.Status.PENDING_REVIEW):
             sale.recalculate_totals()
             sale.save()
 
     def perform_destroy(self, instance):
         sale = instance.sale
         instance.delete()
-        if sale.status == Sale.Status.DRAFT:
+        if sale.status in (Sale.Status.DRAFT, Sale.Status.PENDING_REVIEW):
             sale.recalculate_totals()
             sale.save()

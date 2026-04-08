@@ -49,6 +49,7 @@ class WarehouseSettingsSerializer(serializers.Serializer):
     color_library = serializers.ListField(
         child=serializers.DictField(), required=False
     )
+    pos_api_token = serializers.CharField(required=False, allow_blank=True)
 
 
 class WarehouseSettingsView(APIView):
@@ -84,6 +85,9 @@ class WarehouseSettingsView(APIView):
         if "color_library" in serializer.validated_data:
             settings_obj.color_library = serializer.validated_data["color_library"]
             update_fields.append("color_library")
+        if "pos_api_token" in serializer.validated_data:
+            settings_obj.pos_api_token = serializer.validated_data["pos_api_token"]
+            update_fields.append("pos_api_token")
         if update_fields:
             settings_obj.save(update_fields=update_fields)
         return Response(WarehouseSettingsSerializer(settings_obj).data)

@@ -115,6 +115,14 @@ class WarehouseSettings(models.Model):
         help_text='Unified color library. [{name, hex, status: favorite|normal|hidden, isPreset: bool}]',
     )
 
+    # POS terminal auth token — generated once, entered on POS setup screen.
+    # When merging with fakturuj.si: replace with proper per-device tokens
+    # (separate model, one token per terminal, revocable individually).
+    pos_api_token = models.CharField(
+        max_length=64, blank=True, default="",
+        help_text="API token for POS terminals. Empty = no auth required (dev mode).",
+    )
+
     @classmethod
     def for_firm(cls, firm):
         obj, _ = cls.objects.get_or_create(firm=firm)

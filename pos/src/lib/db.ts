@@ -54,13 +54,12 @@ export interface PosConfig {
   deviceId: string; // auto-generated UUID, unique per terminal install
   locationId: string;
   locationName: string;
+  apiToken: string; // POS API token from settings — empty = no auth (dev mode)
   lastProductSync: string | null;
   lastSaleSync: string | null;
-  // TODO: When merging with fakturuj.si, add token-based auth:
-  // authToken: string | null;
-  // Each POS gets a generated API token (not username/password).
-  // Standard pattern: admin generates token in settings, enters it on POS setup.
-  // Sent as Authorization: Token xxx header. Revocable per-device.
+  // TODO: When merging with fakturuj.si, replace single token with per-device tokens.
+  // Standard: admin generates token in settings, enters it on POS setup.
+  // Sent as Authorization: PosToken xxx header. Revocable per-device.
 }
 
 // ─── Products cache ──────────────────────────────────────────────────────────

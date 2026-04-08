@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Box, Button, CircularProgress, FormControl, InputLabel,
-  MenuItem, Select, Stack, Typography,
+  MenuItem, Select, Stack, TextField, Typography,
 } from "@mui/material";
 import WarehouseIcon from "@mui/icons-material/Warehouse";
 import { fetchLocations, type ApiLocation } from "../lib/api";
@@ -11,6 +11,7 @@ import { syncProducts } from "../lib/sync";
 export default function SetupScreen({ onComplete }: { onComplete: (c: PosConfig) => void }) {
   const [locations, setLocations] = useState<ApiLocation[]>([]);
   const [selectedId, setSelectedId] = useState("");
+  const [token, setToken] = useState("");
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState("");
@@ -38,6 +39,7 @@ export default function SetupScreen({ onComplete }: { onComplete: (c: PosConfig)
       deviceId: crypto.randomUUID(),
       locationId: loc.id,
       locationName: loc.name,
+      apiToken: token || "",
       lastProductSync: null,
       lastSaleSync: null,
     };
@@ -83,6 +85,15 @@ export default function SetupScreen({ onComplete }: { onComplete: (c: PosConfig)
                 ))}
               </Select>
             </FormControl>
+            <TextField
+              fullWidth
+              label="API Token (optional)"
+              placeholder="Leave empty for dev mode"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              size="small"
+              helperText="Copy from Settings → POS Terminal in the main app"
+            />
             <Button
               variant="contained"
               size="large"

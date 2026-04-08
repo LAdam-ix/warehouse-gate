@@ -397,6 +397,9 @@
     "noLinesYet": "No lines yet.",
     "addItemsToSale": "Add items to this sale.",
     "saleFinalized": "Sale finalized — stock deducted",
+    "confirmSale": "Confirm Sale",
+    "saleConfirmed": "Sale confirmed",
+    "void": "Void",
     "failedToFinalize": "Failed to finalize",
     "saleVoided": "Sale voided — stock restored",
     "saleDiscarded": "Sale discarded",
@@ -643,6 +646,14 @@
     "saveColors": "Save colors",
     "colorsSaved": "Colors saved",
     "editPresetHint": "Editing a preset creates a custom copy and hides the original.",
+    "pos": {
+      "title": "POS Terminal",
+      "description": "Configure authentication for POS terminals. Generate a token and enter it on the POS setup screen.",
+      "tokenLabel": "API Token",
+      "tokenPlaceholder": "No token — auth disabled (dev mode)",
+      "generate": "Generate",
+      "tokenHelp": "Copy this token to the POS terminal setup. Empty = any POS can connect without auth."
+    },
     "quickAddStock": "Quick Add Stock — amounts",
     "quickAddFuture": "Configurable amounts coming in a future update.",
     "locations": {
