@@ -56,6 +56,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
   const [pendingProductions, setPendingProductions] = useState<PendingProduction[]>([]);
   const [prodSearch, setProdSearch] = useState("");
   const [pushingProd, setPushingProd] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
 
   const refreshPending = useCallback(async () => {
     const sales = await getPendingSales();
@@ -311,9 +312,21 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
 
   // ─── Filtered products ───────────────────────────────────────────────────
 
+  // All unique category names from cached products
+  const allTags = [...new Set(products.flatMap((p) => p.categoryNames))].sort();
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag); else next.add(tag);
+      return next;
+    });
+  };
+
   const q = search.toLowerCase().trim();
   const filtered = products.filter((p) => {
     if (q && !p.name.toLowerCase().includes(q)) return false;
+    if (selectedTags.size > 0 && !p.categoryNames.some((c) => selectedTags.has(c))) return false;
     if (p.itemType === "physical") {
       return p.variants.some((v) => getStock(v.id) > 0);
     }
@@ -392,6 +405,23 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
                 }}
               />
             </Box>
+            {allTags.length > 0 && (
+              <Stack direction="row" spacing={0.5} sx={{ px: 1.5, pb: 0.5, flexWrap: "wrap", gap: 0.5 }}>
+                {allTags.map((tag) => (
+                  <Chip
+                    key={tag}
+                    label={tag}
+                    size="small"
+                    onClick={() => toggleTag(tag)}
+                    color={selectedTags.has(tag) ? "primary" : "default"}
+                    variant={selectedTags.has(tag) ? "filled" : "outlined"}
+                  />
+                ))}
+                {selectedTags.size > 0 && (
+                  <Chip label="Clear" size="small" variant="outlined" onClick={() => setSelectedTags(new Set())} onDelete={() => setSelectedTags(new Set())} />
+                )}
+              </Stack>
+            )}
             <Box sx={{ flex: 1, overflow: "auto", p: 1.5, pt: 1 }}>
               <Stack spacing={0.75}>
                 {filtered.map((product) => (
