@@ -36,6 +36,7 @@ export interface PosVariant {
 
 export interface PendingSale {
   id: string; // client-generated UUID
+  deviceId: string; // which POS terminal created this
   lines: Array<{
     variantId: string;
     description: string;
@@ -50,10 +51,16 @@ export interface PendingSale {
 }
 
 export interface PosConfig {
+  deviceId: string; // auto-generated UUID, unique per terminal install
   locationId: string;
   locationName: string;
   lastProductSync: string | null;
   lastSaleSync: string | null;
+  // TODO: When merging with fakturuj.si, add token-based auth:
+  // authToken: string | null;
+  // Each POS gets a generated API token (not username/password).
+  // Standard pattern: admin generates token in settings, enters it on POS setup.
+  // Sent as Authorization: Token xxx header. Revocable per-device.
 }
 
 // ─── Products cache ──────────────────────────────────────────────────────────
@@ -100,14 +107,14 @@ export async function addPendingSale(sale: PendingSale): Promise<void> {
   await set("pos_pending_sales", pending);
 }
 
+export async function updatePendingSale(updated: PendingSale): Promise<void> {
+  const pending = await getPendingSales();
+  await set("pos_pending_sales", pending.map((s) => s.id === updated.id ? updated : s));
+}
+
 export async function removePendingSale(id: string): Promise<void> {
   const pending = await getPendingSales();
   await set("pos_pending_sales", pending.filter((s) => s.id !== id));
-}
-
-export async function clearSyncedSales(): Promise<void> {
-  const pending = await getPendingSales();
-  await set("pos_pending_sales", pending.filter((s) => !s.syncedAt));
 }
 
 // ─── Config ──────────────────────────────────────────────────────────────────

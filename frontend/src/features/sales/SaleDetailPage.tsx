@@ -14,7 +14,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import { toast } from "react-toastify";
 import {
-  useSale, useUpdateSale, useFinalizeSale, useVoidSale, useDeleteSale,
+  useSale, useUpdateSale, useFinalizeSale, useConfirmSale, useVoidSale, useDeleteSale,
   useAddSaleLine, useUpdateSaleLine, useDeleteSaleLine,
   useLocations, useStockEntries, useWarehouseSettings,
 } from "../../api/hooks";
@@ -306,6 +306,7 @@ export default function SaleDetailPage() {
 
   const updateSale = useUpdateSale(saleId!);
   const finalize = useFinalizeSale(saleId!);
+  const confirmSale = useConfirmSale(saleId!);
   const voidSale = useVoidSale(saleId!);
   const deleteSale = useDeleteSale(saleId!);
   const addLine = useAddSaleLine(saleId!);
@@ -314,6 +315,8 @@ export default function SaleDetailPage() {
   if (!sale) return <Typography>{t("sales.saleNotFound")}</Typography>;
 
   const isDraft = sale.status === "draft";
+  const isPendingReview = sale.status === "pending_review";
+  const isEditable = isDraft || isPendingReview;
   const marginPct = parseFloat(sale.total) > 0
     ? ((parseFloat(sale.profit) / parseFloat(sale.total)) * 100).toFixed(1)
     : "—";
@@ -433,14 +436,26 @@ export default function SaleDetailPage() {
             {t("sales.created", { date: new Date(sale.createdAt).toLocaleString() })}
           </Typography>
         </Box>
-        <Chip
-          label={sale.status}
-          color={sale.status === "finalized" ? "success" : sale.status === "voided" ? "error" : sale.status === "refunded" ? "info" : sale.status === "discarded" ? "default" : "warning"}
-        />
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Chip
+            label={sale.status === "pending_review" ? "pending review" : sale.status}
+            color={sale.status === "finalized" ? "success" : sale.status === "pending_review" ? "info" : sale.status === "voided" ? "error" : sale.status === "refunded" ? "info" : sale.status === "discarded" ? "default" : "warning"}
+          />
+          {sale.source === "pos" && (
+            <Chip label="POS" size="small" variant="outlined" />
+          )}
+          {isPendingReview && sale.autoConfirmAt && (() => {
+            const diff = new Date(sale.autoConfirmAt).getTime() - Date.now();
+            if (diff <= 0) return <Typography variant="caption" color="warning.main">Auto-confirming soon...</Typography>;
+            const days = Math.floor(diff / 86400000);
+            const hours = Math.floor((diff % 86400000) / 3600000);
+            return <Typography variant="caption" color="text.secondary">Auto-confirms in {days}d {hours}h</Typography>;
+          })()}
+        </Stack>
       </Stack>
 
-      {/* ── Draft: cart layout ── */}
-      {isDraft && (
+      {/* ── Draft / Pending Review: cart layout ── */}
+      {isEditable && (
         <Grid container spacing={2}>
           {/* Left: product picker */}
           <Grid size={{ xs: 12, sm: 5 }}>
@@ -514,22 +529,38 @@ export default function SaleDetailPage() {
 
               {/* Actions */}
               <Stack direction="row" spacing={1}>
-                <Button
-                  variant="contained"
-                  color="success"
-                  startIcon={<CheckCircleIcon />}
-                  onClick={handleFinalize}
-                  disabled={finalize.isPending || sale.lines.length === 0}
-                >
-                  {t("sales.finalizeSale")}
-                </Button>
+                {isDraft && (
+                  <Button
+                    variant="contained"
+                    color="success"
+                    startIcon={<CheckCircleIcon />}
+                    onClick={handleFinalize}
+                    disabled={finalize.isPending || sale.lines.length === 0}
+                  >
+                    {t("sales.finalizeSale")}
+                  </Button>
+                )}
+                {isPendingReview && (
+                  <Button
+                    variant="contained"
+                    color="success"
+                    startIcon={<CheckCircleIcon />}
+                    onClick={async () => {
+                      await confirmSale.mutateAsync();
+                      toast.success(t("sales.saleConfirmed"));
+                    }}
+                    disabled={confirmSale.isPending}
+                  >
+                    {t("sales.confirmSale")}
+                  </Button>
+                )}
                 <Button
                   variant="outlined"
                   color="error"
                   startIcon={<CancelIcon />}
                   onClick={() => setVoidConfirmOpen(true)}
                 >
-                  {t("sales.discard")}
+                  {isPendingReview ? t("sales.void") : t("sales.discard")}
                 </Button>
               </Stack>
             </Stack>
@@ -538,7 +569,7 @@ export default function SaleDetailPage() {
       )}
 
       {/* ── Finalized / voided: summary view ── */}
-      {!isDraft && (
+      {!isEditable && (
         <>
           <Stack direction="row" spacing={1}>
             {sale.status === "finalized" && (

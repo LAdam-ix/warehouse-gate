@@ -35,6 +35,7 @@ export default function SetupScreen({ onComplete }: { onComplete: (c: PosConfig)
 
     setSyncing(true);
     const config: PosConfig = {
+      deviceId: crypto.randomUUID(),
       locationId: loc.id,
       locationName: loc.name,
       lastProductSync: null,
