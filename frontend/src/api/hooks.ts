@@ -555,6 +555,30 @@ export const useFinalizeSale = (id: string) => {
   });
 };
 
+export const useConfirmSale = (id: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => post<Sale>(`/sales/${id}/confirm/`),
+    onSuccess: () => {
+      qc.refetchQueries({ queryKey: ["sales", id] });
+      qc.invalidateQueries({ queryKey: ["sales"] });
+    },
+  });
+};
+
+export const usePosFinalizeSale = (id: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => post<Sale>(`/sales/${id}/pos-finalize/`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sales"] });
+      qc.invalidateQueries({ queryKey: ["stock-entries"] });
+      qc.invalidateQueries({ queryKey: ["stock-movements"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+};
+
 export const useVoidSale = (id: string) => {
   const qc = useQueryClient();
   return useMutation({
