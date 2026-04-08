@@ -1,14 +1,17 @@
 /**
- * Sync engine: pulls products from backend, pushes pending sales.
+ * Sync engine.
+ * Products: auto-pulled from backend (safe, read-only).
+ * Sales: pushed to backend ONLY on manual trigger (user controls when sales leave device).
  */
 import {
   setCachedProducts,
   setLocalStock,
   getPendingSales, removePendingSale,
+  getPendingProductions, removePendingProduction,
   getConfig, setConfig,
   type PosProduct,
 } from "./db";
-import { fetchProducts, pushSale, isOnline } from "./api";
+import { fetchProducts, pushSale, pushProductionRequest, isOnline } from "./api";
 
 export async function syncProducts(): Promise<PosProduct[]> {
   const apiProducts = await fetchProducts();
@@ -38,7 +41,7 @@ export async function syncProducts(): Promise<PosProduct[]> {
 
   await setCachedProducts(products);
 
-  // Rebuild local stock from backend data
+  // Rebuild local stock from backend data, but preserve local deductions for unsynced sales
   const config = await getConfig();
   const locationId = config?.locationId;
   if (locationId) {
@@ -49,10 +52,18 @@ export async function syncProducts(): Promise<PosProduct[]> {
         stock[`${v.id}:${locationId}`] = qty;
       }
     }
+    // Deduct quantities from completed local sales (backend doesn't know about them yet)
+    // Drafts don't deduct — the stock is only "reserved" when the sale is completed
+    const pending = await getPendingSales();
+    for (const sale of pending.filter((s) => s.status === "completed")) {
+      for (const line of sale.lines) {
+        const key = `${line.variantId}:${locationId}`;
+        stock[key] = Math.max(0, (stock[key] ?? 0) - parseInt(line.quantity));
+      }
+    }
     await setLocalStock(stock);
   }
 
-  // Update last sync time
   if (config) {
     await setConfig({ ...config, lastProductSync: new Date().toISOString() });
   }
@@ -60,14 +71,15 @@ export async function syncProducts(): Promise<PosProduct[]> {
   return products;
 }
 
-export async function syncPendingSales(): Promise<{ synced: number; failed: number }> {
+/** Push completed sales to backend. Called manually only. Ignores drafts. */
+export async function pushPendingSales(): Promise<{ synced: number; failed: number }> {
   const pending = await getPendingSales();
-  const unsynced = pending.filter((s) => !s.syncedAt);
+  const completed = pending.filter((s) => s.status === "completed");
 
   let synced = 0;
   let failed = 0;
 
-  for (const sale of unsynced) {
+  for (const sale of completed) {
     try {
       await pushSale({
         lines: sale.lines.map((l) => ({
@@ -79,9 +91,8 @@ export async function syncPendingSales(): Promise<{ synced: number; failed: numb
           discountAmount: "0",
           discountNote: "",
         })),
-        note: sale.note
-          ? `[POS ${new Date(sale.deviceCreatedAt).toLocaleString()}] ${sale.note}`
-          : `[POS ${new Date(sale.deviceCreatedAt).toLocaleString()}]`,
+        note: `[POS: ${sale.deviceName || sale.deviceId.slice(0, 8)} | ${new Date(sale.deviceCreatedAt).toLocaleString()}]${sale.note ? ` ${sale.note}` : ""}`,
+        deviceCreatedAt: sale.deviceCreatedAt,
       });
       await removePendingSale(sale.id);
       synced++;
@@ -100,16 +111,33 @@ export async function syncPendingSales(): Promise<{ synced: number; failed: numb
   return { synced, failed };
 }
 
-export async function fullSync(): Promise<{ products: number; salesSynced: number; salesFailed: number }> {
+/** Push pending production requests to backend. */
+export async function pushPendingProductions(): Promise<{ synced: number; failed: number }> {
+  const pending = await getPendingProductions();
+  let synced = 0;
+  let failed = 0;
+
+  for (const req of pending) {
+    try {
+      await pushProductionRequest({
+        variantId: req.variantId,
+        quantity: req.quantity,
+        locationId: req.locationId,
+        note: `[POS: ${req.deviceName || req.deviceId.slice(0, 8)} | ${new Date(req.deviceCreatedAt).toLocaleString()}]${req.note ? ` ${req.note}` : ""}`,
+      });
+      await removePendingProduction(req.id);
+      synced++;
+    } catch {
+      failed++;
+    }
+  }
+  return { synced, failed };
+}
+
+/** Auto-sync: only pulls products (safe). Does NOT push sales. */
+export async function autoSync(): Promise<number> {
   const online = await isOnline();
-  if (!online) throw new Error("offline");
-
-  const salesResult = await syncPendingSales();
+  if (!online) return 0;
   const products = await syncProducts();
-
-  return {
-    products: products.length,
-    salesSynced: salesResult.synced,
-    salesFailed: salesResult.failed,
-  };
+  return products.length;
 }

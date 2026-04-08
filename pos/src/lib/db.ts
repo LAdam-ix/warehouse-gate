@@ -34,9 +34,13 @@ export interface PosVariant {
   galleryPhotoUrl: string | null;
 }
 
+export type PosStatus = "draft" | "completed" | "synced";
+
 export interface PendingSale {
   id: string; // client-generated UUID
   deviceId: string; // which POS terminal created this
+  deviceName: string; // human-readable terminal name
+  status: PosStatus; // draft = saved cart, completed = sale done awaiting sync, synced = pushed
   lines: Array<{
     variantId: string;
     description: string;
@@ -52,6 +56,7 @@ export interface PendingSale {
 
 export interface PosConfig {
   deviceId: string; // auto-generated UUID, unique per terminal install
+  deviceName: string; // human-readable name, set on setup, editable
   locationId: string;
   locationName: string;
   apiToken: string; // POS API token from settings — empty = no auth (dev mode)
@@ -114,6 +119,35 @@ export async function updatePendingSale(updated: PendingSale): Promise<void> {
 export async function removePendingSale(id: string): Promise<void> {
   const pending = await getPendingSales();
   await set("pos_pending_sales", pending.filter((s) => s.id !== id));
+}
+
+// ─── Pending production requests ─────────────────────────────────────────────
+
+export interface PendingProduction {
+  id: string;
+  deviceId: string;
+  deviceName: string;
+  variantId: string;
+  description: string;
+  quantity: number;
+  locationId: string;
+  note: string;
+  deviceCreatedAt: string;
+}
+
+export async function getPendingProductions(): Promise<PendingProduction[]> {
+  return (await get("pos_pending_productions")) ?? [];
+}
+
+export async function addPendingProduction(req: PendingProduction): Promise<void> {
+  const pending = await getPendingProductions();
+  pending.push(req);
+  await set("pos_pending_productions", pending);
+}
+
+export async function removePendingProduction(id: string): Promise<void> {
+  const pending = await getPendingProductions();
+  await set("pos_pending_productions", pending.filter((r) => r.id !== id));
 }
 
 // ─── Config ──────────────────────────────────────────────────────────────────

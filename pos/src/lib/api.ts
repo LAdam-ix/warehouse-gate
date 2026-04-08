@@ -129,6 +129,25 @@ export async function pushSale(sale: {
   return created;
 }
 
+// ─── Production ──────────────────────────────────────────────────────────────
+
+export async function pushProductionRequest(req: {
+  variantId: string;
+  quantity: number;
+  locationId: string;
+  note: string;
+}): Promise<{ id: string }> {
+  return fetchJson<{ id: string }>("/production-requests/", {
+    method: "POST",
+    body: JSON.stringify({
+      variant: req.variantId,
+      quantity: req.quantity,
+      targetLocation: req.locationId,
+      note: req.note,
+    }),
+  });
+}
+
 export async function isOnline(): Promise<boolean> {
   if (!navigator.onLine) return false;
   try {

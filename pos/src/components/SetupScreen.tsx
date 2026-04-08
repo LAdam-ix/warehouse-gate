@@ -11,6 +11,7 @@ import { syncProducts } from "../lib/sync";
 export default function SetupScreen({ onComplete }: { onComplete: (c: PosConfig) => void }) {
   const [locations, setLocations] = useState<ApiLocation[]>([]);
   const [selectedId, setSelectedId] = useState("");
+  const [deviceName, setDeviceName] = useState("");
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -37,6 +38,7 @@ export default function SetupScreen({ onComplete }: { onComplete: (c: PosConfig)
     setSyncing(true);
     const config: PosConfig = {
       deviceId: crypto.randomUUID(),
+      deviceName: deviceName || `POS ${loc.name}`,
       locationId: loc.id,
       locationName: loc.name,
       apiToken: token || "",
@@ -75,6 +77,14 @@ export default function SetupScreen({ onComplete }: { onComplete: (c: PosConfig)
           <Typography color="error">{error}</Typography>
         ) : (
           <>
+            <TextField
+              fullWidth
+              label="Device Name"
+              placeholder="e.g. Counter 1, Market Stand"
+              value={deviceName}
+              onChange={(e) => setDeviceName(e.target.value)}
+              helperText="Identifies this terminal in sales history"
+            />
             <FormControl fullWidth>
               <InputLabel>Location</InputLabel>
               <Select label="Location" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>

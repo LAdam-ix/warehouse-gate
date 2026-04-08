@@ -13,14 +13,17 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import EditIcon from "@mui/icons-material/Edit";
+import ShoppingCartCheckoutIcon from "@mui/icons-material/ShoppingCartCheckout";
+import PrecisionManufacturingIcon from "@mui/icons-material/PrecisionManufacturing";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import HistoryIcon from "@mui/icons-material/History";
 import {
   getCachedProducts, getLocalStock, deductLocalStock,
   addPendingSale, getPendingSales, removePendingSale, updatePendingSale,
-  type PosProduct, type PosVariant, type PosConfig, type PendingSale,
+  addPendingProduction, getPendingProductions, removePendingProduction,
+  type PosProduct, type PosVariant, type PosConfig, type PendingSale, type PendingProduction,
 } from "../lib/db";
-import { autoSync, pushPendingSales, syncProducts } from "../lib/sync";
+import { autoSync, pushPendingSales, pushPendingProductions, syncProducts } from "../lib/sync";
 import { isOnline } from "../lib/api";
 
 // ─── Cart types ──────────────────────────────────────────────────────────────
@@ -50,6 +53,9 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
   const [activeTab, setActiveTab] = useState(0);
   const [pendingSales, setPendingSales] = useState<PendingSale[]>([]);
   const [editingSale, setEditingSale] = useState<PendingSale | null>(null);
+  const [pendingProductions, setPendingProductions] = useState<PendingProduction[]>([]);
+  const [prodSearch, setProdSearch] = useState("");
+  const [pushingProd, setPushingProd] = useState(false);
 
   const refreshPending = useCallback(async () => {
     const sales = await getPendingSales();
@@ -61,6 +67,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     getCachedProducts().then(setProducts);
     getLocalStock().then(setStock);
     refreshPending();
+    getPendingProductions().then(setPendingProductions);
   }, [refreshPending]);
 
   // Auto-sync products only (not sales)
@@ -132,28 +139,40 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     );
   };
 
+  // Track which draft is currently loaded (so we update it, not create a new one)
+  const [loadedDraftId, setLoadedDraftId] = useState<string | null>(null);
+
   // ─── Complete sale ───────────────────────────────────────────────────────
+
+  const buildSaleFromCart = (): PendingSale => ({
+    id: loadedDraftId ?? crypto.randomUUID(),
+    deviceId: config.deviceId,
+    deviceName: config.deviceName,
+    status: "completed",
+    lines: cart.map((l) => ({
+      variantId: l.variantId,
+      description: l.label,
+      quantity: String(l.quantity),
+      unitPrice: l.unitPrice,
+      location: config.locationId,
+    })),
+    note: "",
+    deviceCreatedAt: new Date().toISOString(),
+    locationId: config.locationId,
+    syncedAt: null,
+  });
 
   const completeSale = async () => {
     if (cart.length === 0) return;
 
-    const sale: PendingSale = {
-      id: crypto.randomUUID(),
-      deviceId: config.deviceId,
-      lines: cart.map((l) => ({
-        variantId: l.variantId,
-        description: l.label,
-        quantity: String(l.quantity),
-        unitPrice: l.unitPrice,
-        location: config.locationId,
-      })),
-      note: "",
-      deviceCreatedAt: new Date().toISOString(),
-      locationId: config.locationId,
-      syncedAt: null,
-    };
+    const sale = buildSaleFromCart();
 
+    // If this was a loaded draft, remove the old draft first
+    if (loadedDraftId) {
+      await removePendingSale(loadedDraftId);
+    }
     await addPendingSale(sale);
+
     for (const line of cart) {
       await deductLocalStock(line.variantId, config.locationId, line.quantity);
     }
@@ -162,7 +181,79 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
 
     setSaleComplete(true);
     setCart([]);
+    setLoadedDraftId(null);
     setTimeout(() => { setSaleComplete(false); setShowCart(false); }, 2000);
+  };
+
+  // ─── Save as draft ───────────────────────────────────────────────────────
+
+  const saveDraft = async () => {
+    if (cart.length === 0) return;
+
+    const draft: PendingSale = {
+      ...buildSaleFromCart(),
+      status: "draft",
+    };
+
+    if (loadedDraftId) {
+      await updatePendingSale(draft);
+    } else {
+      await addPendingSale(draft);
+    }
+    await refreshPending();
+    setCart([]);
+    setLoadedDraftId(null);
+  };
+
+  // ─── Load draft into cart ────────────────────────────────────────────────
+
+  const loadDraft = async (sale: PendingSale) => {
+    // Check stock availability for each line
+    const currentStock = await getLocalStock();
+    const warnings: string[] = [];
+    const loadableLines: CartLine[] = [];
+
+    for (const line of sale.lines) {
+      const available = currentStock[`${line.variantId}:${config.locationId}`] ?? 0;
+      const qty = parseInt(line.quantity);
+      if (available < qty) {
+        warnings.push(`${line.description}: need ${qty}, only ${available} available`);
+        if (available > 0) {
+          loadableLines.push({
+            id: crypto.randomUUID(),
+            variantId: line.variantId,
+            label: line.description,
+            unitPrice: line.unitPrice,
+            quantity: available,
+            photo: null,
+          });
+        }
+      } else {
+        loadableLines.push({
+          id: crypto.randomUUID(),
+          variantId: line.variantId,
+          label: line.description,
+          unitPrice: line.unitPrice,
+          quantity: qty,
+          photo: null,
+        });
+      }
+    }
+
+    if (warnings.length > 0) {
+      // Still load what we can, but warn
+      alert("Stock warning:\n" + warnings.join("\n") + "\n\nLoading available quantities.");
+    }
+
+    if (loadableLines.length === 0) {
+      alert("No items available in stock. Draft cannot be loaded.");
+      return;
+    }
+
+    setCart(loadableLines);
+    setLoadedDraftId(sale.id);
+    setActiveTab(0); // switch to sell tab
+    if (isMobile) setShowCart(true);
   };
 
   // ─── Edit/delete pending sale ────────────────────────────────────────────
@@ -180,6 +271,42 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     await updatePendingSale(sale);
     await refreshPending();
     setEditingSale(null);
+  };
+
+  // ─── Production ──────────────────────────────────────────────────────────
+
+  const addProductionRequest = async (product: PosProduct, variant: PosVariant, qty: number) => {
+    const label = variant.isDefault
+      ? product.name
+      : `${product.name} — ${variant.attributeValues.map((a) => a.value).join(", ")}`;
+
+    const req: PendingProduction = {
+      id: crypto.randomUUID(),
+      deviceId: config.deviceId,
+      deviceName: config.deviceName,
+      variantId: variant.id,
+      description: label,
+      quantity: qty,
+      locationId: config.locationId,
+      note: "",
+      deviceCreatedAt: new Date().toISOString(),
+    };
+    await addPendingProduction(req);
+    setPendingProductions(await getPendingProductions());
+  };
+
+  const handlePushProductions = async () => {
+    const online = await isOnline();
+    if (!online) return;
+    setPushingProd(true);
+    await pushPendingProductions();
+    setPendingProductions(await getPendingProductions());
+    setPushingProd(false);
+  };
+
+  const handleDeleteProduction = async (id: string) => {
+    await removePendingProduction(id);
+    setPendingProductions(await getPendingProductions());
   };
 
   // ─── Filtered products ───────────────────────────────────────────────────
@@ -210,13 +337,16 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
             sx={{ mr: 1, color: "white", borderColor: "rgba(255,255,255,0.5)" }}
             variant="outlined"
           />
-          {pendingSales.length > 0 && (
-            <Chip label={`${pendingSales.length} local`} size="small" color="warning" sx={{ mr: 0.5 }} />
+          {pendingSales.filter((s) => s.status === "completed").length > 0 && (
+            <Chip label={`${pendingSales.filter((s) => s.status === "completed").length} to sync`} size="small" color="warning" sx={{ mr: 0.5 }} />
+          )}
+          {pendingSales.filter((s) => s.status === "draft").length > 0 && (
+            <Chip label={`${pendingSales.filter((s) => s.status === "draft").length} drafts`} size="small" color="info" sx={{ mr: 0.5 }} />
           )}
           <IconButton color="inherit" onClick={handleProductSync} disabled={syncing} title="Sync products">
             <SyncIcon sx={{ animation: syncing ? "spin 1s linear infinite" : undefined }} />
           </IconButton>
-          {pendingSales.length > 0 && (
+          {pendingSales.filter((s) => s.status === "completed").length > 0 && (
             <IconButton color="inherit" onClick={handlePushSales} disabled={pushing} title="Push sales to server">
               <CloudUploadIcon sx={{ animation: pushing ? "spin 1s linear infinite" : undefined }} />
             </IconButton>
@@ -235,6 +365,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
         >
           <Tab icon={<PointOfSaleIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Sell" />
           <Tab icon={<HistoryIcon sx={{ fontSize: 16 }} />} iconPosition="start" label={`History (${pendingSales.length})`} />
+          <Tab icon={<PrecisionManufacturingIcon sx={{ fontSize: 16 }} />} iconPosition="start" label={`Produce (${pendingProductions.length})`} />
         </Tabs>
       </AppBar>
 
@@ -347,21 +478,36 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
                 <Typography variant="h6" fontWeight="bold">Total</Typography>
                 <Typography variant="h6" fontWeight="bold">€{cartTotal.toFixed(2)}</Typography>
               </Stack>
-              <Button
-                variant="contained"
-                color="success"
-                size="large"
-                fullWidth
-                disabled={cart.length === 0}
-                onClick={completeSale}
-                sx={{ py: 1.5, fontSize: "1.1rem" }}
-              >
-                {saleComplete ? (
-                  <><CheckCircleIcon sx={{ mr: 1 }} /> Sale complete!</>
-                ) : (
-                  `Complete sale — €${cartTotal.toFixed(2)}`
-                )}
-              </Button>
+              {loadedDraftId && (
+                <Typography variant="caption" color="info.main" sx={{ mb: 1, display: "block" }}>
+                  Loaded from draft — complete to finalize or save to update draft
+                </Typography>
+              )}
+              <Stack spacing={1}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="large"
+                  fullWidth
+                  disabled={cart.length === 0}
+                  onClick={completeSale}
+                  sx={{ py: 1.5, fontSize: "1.1rem" }}
+                >
+                  {saleComplete ? (
+                    <><CheckCircleIcon sx={{ mr: 1 }} /> Sale complete!</>
+                  ) : (
+                    `Complete sale — €${cartTotal.toFixed(2)}`
+                  )}
+                </Button>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  disabled={cart.length === 0}
+                  onClick={saveDraft}
+                >
+                  {loadedDraftId ? "Update draft" : "Save as draft"}
+                </Button>
+              </Stack>
             </Box>
           </Box>
 
@@ -392,66 +538,119 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
               onCancel={() => setEditingSale(null)}
             />
           ) : (
-            <Stack spacing={1}>
+            <Stack spacing={2}>
+              {/* Push completed sales button */}
+              {pendingSales.filter((s) => s.status === "completed").length > 0 && (
+                <Button
+                  variant="contained"
+                  startIcon={<CloudUploadIcon />}
+                  onClick={handlePushSales}
+                  disabled={pushing}
+                >
+                  {pushing ? "Pushing..." : `Push ${pendingSales.filter((s) => s.status === "completed").length} sale(s) to server`}
+                </Button>
+              )}
+
               {pendingSales.length === 0 ? (
                 <Typography color="text.secondary" textAlign="center" sx={{ py: 4 }}>
-                  No sales recorded on this device.
+                  No sales or drafts on this device.
                 </Typography>
               ) : (
                 <>
-                  {pendingSales.length > 0 && (
-                    <Button
-                      variant="contained"
-                      startIcon={<CloudUploadIcon />}
-                      onClick={handlePushSales}
-                      disabled={pushing}
-                      sx={{ mb: 1 }}
-                    >
-                      {pushing ? "Pushing..." : `Push ${pendingSales.length} sale(s) to server`}
-                    </Button>
+                  {/* Drafts section */}
+                  {pendingSales.filter((s) => s.status === "draft").length > 0 && (
+                    <>
+                      <Typography variant="subtitle2" color="text.secondary">Saved drafts</Typography>
+                      {pendingSales.filter((s) => s.status === "draft").reverse().map((sale) => (
+                        <SaleCard key={sale.id} sale={sale} onEdit={() => setEditingSale(sale)} onDelete={() => handleDeleteSale(sale.id)} onLoad={() => loadDraft(sale)} />
+                      ))}
+                    </>
                   )}
-                  {[...pendingSales].reverse().map((sale) => {
-                    const total = sale.lines.reduce(
-                      (s, l) => s + parseFloat(l.unitPrice) * parseInt(l.quantity), 0
-                    );
-                    const items = sale.lines.reduce((s, l) => s + parseInt(l.quantity), 0);
-                    return (
-                      <Paper key={sale.id} variant="outlined" sx={{ p: 1.5 }}>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <Box sx={{ flex: 1 }}>
-                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.25 }}>
-                              <Typography variant="body2" fontWeight="bold">
-                                €{total.toFixed(2)}
-                              </Typography>
-                              <Chip label={`${items} items`} size="small" variant="outlined" sx={{ height: 18, fontSize: "0.7rem" }} />
-                              <Chip label="local" size="small" color="warning" sx={{ height: 18, fontSize: "0.7rem" }} />
-                            </Stack>
-                            <Typography variant="caption" color="text.secondary">
-                              {new Date(sale.deviceCreatedAt).toLocaleString()}
-                            </Typography>
-                            {sale.note && (
-                              <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                                {sale.note}
-                              </Typography>
-                            )}
-                            <Typography variant="caption" color="text.disabled" sx={{ display: "block" }}>
-                              {sale.lines.map((l) => `${l.description} ×${l.quantity}`).join(", ")}
-                            </Typography>
-                          </Box>
-                          <IconButton size="small" onClick={() => setEditingSale(sale)} title="Edit">
-                            <EditIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                          <IconButton size="small" onClick={() => handleDeleteSale(sale.id)} title="Delete">
-                            <DeleteIcon sx={{ fontSize: 18, color: "error.main" }} />
-                          </IconButton>
-                        </Stack>
-                      </Paper>
-                    );
-                  })}
+
+                  {/* Completed (awaiting sync) section */}
+                  {pendingSales.filter((s) => s.status === "completed").length > 0 && (
+                    <>
+                      <Typography variant="subtitle2" color="text.secondary">Completed — awaiting sync</Typography>
+                      {pendingSales.filter((s) => s.status === "completed").reverse().map((sale) => (
+                        <SaleCard key={sale.id} sale={sale} onEdit={() => setEditingSale(sale)} onDelete={() => handleDeleteSale(sale.id)} />
+                      ))}
+                    </>
+                  )}
                 </>
               )}
             </Stack>
           )}
+        </Box>
+      )}
+
+      {/* ─── PRODUCTION TAB ─── */}
+      {activeTab === 2 && (
+        <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {/* Search */}
+          <Box sx={{ p: 1.5, pb: 0.5 }}>
+            <TextField
+              fullWidth size="small"
+              placeholder="Search products to produce..."
+              value={prodSearch}
+              onChange={(e) => setProdSearch(e.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18 }} /></InputAdornment>,
+                },
+              }}
+            />
+          </Box>
+
+          <Box sx={{ flex: 1, overflow: "auto", p: 1.5, pt: 1 }}>
+            <Stack spacing={0.75}>
+              {/* Pending production requests */}
+              {pendingProductions.length > 0 && (
+                <>
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                    <Typography variant="subtitle2" color="text.secondary" sx={{ flex: 1 }}>
+                      Pending requests ({pendingProductions.length})
+                    </Typography>
+                    <Button
+                      size="small" variant="contained"
+                      startIcon={<CloudUploadIcon />}
+                      onClick={handlePushProductions}
+                      disabled={pushingProd}
+                    >
+                      Push
+                    </Button>
+                  </Stack>
+                  {pendingProductions.map((req) => (
+                    <Paper key={req.id} variant="outlined" sx={{ p: 1, borderColor: "info.light" }}>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="body2" fontWeight="medium">{req.description}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            ×{req.quantity} — {new Date(req.deviceCreatedAt).toLocaleTimeString()}
+                          </Typography>
+                        </Box>
+                        <IconButton size="small" onClick={() => handleDeleteProduction(req.id)}>
+                          <DeleteIcon sx={{ fontSize: 16, color: "error.main" }} />
+                        </IconButton>
+                      </Stack>
+                    </Paper>
+                  ))}
+                  <Divider sx={{ my: 1 }} />
+                </>
+              )}
+
+              {/* All products (not filtered by stock — you're producing, not selling) */}
+              <Typography variant="subtitle2" color="text.secondary">All products</Typography>
+              {products
+                .filter((p) => !prodSearch || p.name.toLowerCase().includes(prodSearch.toLowerCase()))
+                .map((product) => (
+                  <ProductionCard
+                    key={product.id}
+                    product={product}
+                    onAdd={(variant, qty) => addProductionRequest(product, variant, qty)}
+                  />
+                ))}
+            </Stack>
+          </Box>
         </Box>
       )}
 
@@ -553,6 +752,122 @@ function SaleEditor({
         </Button>
       </Stack>
     </Stack>
+  );
+}
+
+// ─── Sale card (history list item) ───────────────────────────────────────────
+
+function SaleCard({
+  sale,
+  onEdit,
+  onDelete,
+  onLoad,
+}: {
+  sale: PendingSale;
+  onEdit: () => void;
+  onDelete: () => void;
+  onLoad?: () => void;
+}) {
+  const total = sale.lines.reduce((s, l) => s + parseFloat(l.unitPrice) * parseInt(l.quantity), 0);
+  const items = sale.lines.reduce((s, l) => s + parseInt(l.quantity), 0);
+  const isDraft = sale.status === "draft";
+
+  return (
+    <Paper variant="outlined" sx={{ p: 1.5, borderColor: isDraft ? "info.light" : undefined }}>
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <Box sx={{ flex: 1 }}>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.25 }}>
+            <Typography variant="body2" fontWeight="bold">€{total.toFixed(2)}</Typography>
+            <Chip label={`${items} items`} size="small" variant="outlined" sx={{ height: 18, fontSize: "0.7rem" }} />
+            <Chip
+              label={isDraft ? "draft" : "completed"}
+              size="small"
+              color={isDraft ? "info" : "warning"}
+              sx={{ height: 18, fontSize: "0.7rem" }}
+            />
+          </Stack>
+          <Typography variant="caption" color="text.secondary">
+            {new Date(sale.deviceCreatedAt).toLocaleString()}
+          </Typography>
+          {sale.note && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{sale.note}</Typography>
+          )}
+          <Typography variant="caption" color="text.disabled" sx={{ display: "block" }}>
+            {sale.lines.map((l) => `${l.description} ×${l.quantity}`).join(", ")}
+          </Typography>
+        </Box>
+        {onLoad && isDraft && (
+          <IconButton size="small" onClick={onLoad} title="Load into cart" color="primary">
+            <ShoppingCartCheckoutIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        )}
+        <IconButton size="small" onClick={onEdit} title="Edit">
+          <EditIcon sx={{ fontSize: 18 }} />
+        </IconButton>
+        <IconButton size="small" onClick={onDelete} title="Delete">
+          <DeleteIcon sx={{ fontSize: 18, color: "error.main" }} />
+        </IconButton>
+      </Stack>
+    </Paper>
+  );
+}
+
+// ─── Production card ─────────────────────────────────────────────────────────
+
+function ProductionCard({
+  product,
+  onAdd,
+}: {
+  product: PosProduct;
+  onAdd: (variant: PosVariant, qty: number) => void;
+}) {
+  const variants = product.variants.filter((v) => v.isActive);
+  const isSingle = variants.length <= 1;
+  const singleVariant = variants[0];
+
+  if (isSingle && singleVariant) {
+    return (
+      <Paper variant="outlined" sx={{ p: 1.5 }}>
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          {product.primaryPhoto && (
+            <Box component="img" src={product.primaryPhoto}
+              sx={{ width: 36, height: 36, borderRadius: "4px", objectFit: "cover", flexShrink: 0 }} />
+          )}
+          <Typography variant="body2" fontWeight="bold" sx={{ flex: 1 }} noWrap>{product.name}</Typography>
+          {[1, 5, 10].map((n) => (
+            <Button key={n} size="small" variant="outlined" sx={{ minWidth: 36, px: 0.5, fontSize: "0.75rem" }}
+              onClick={() => onAdd(singleVariant, n)}>
+              +{n}
+            </Button>
+          ))}
+        </Stack>
+      </Paper>
+    );
+  }
+
+  return (
+    <Paper variant="outlined" sx={{ overflow: "hidden" }}>
+      <Box sx={{ px: 1.5, py: 1, bgcolor: "grey.50" }}>
+        <Typography variant="body2" fontWeight="bold">{product.name}</Typography>
+      </Box>
+      <Divider />
+      <Stack divider={<Divider />}>
+        {variants.map((v) => {
+          const vLabel = v.isDefault ? "Default" : v.attributeValues.map((a) => a.value).join(", ");
+          return (
+            <Stack key={v.id} direction="row" alignItems="center" spacing={1} sx={{ px: 1.5, py: 0.75 }}>
+              <Typography variant="body2" sx={{ flex: 1 }}>{vLabel}</Typography>
+              {[1, 5, 10].map((n) => (
+                <Button key={n} size="small" variant="outlined" sx={{ minWidth: 32, px: 0.5, fontSize: "0.7rem" }}
+                  onClick={() => onAdd(v, n)}>
+                  +{n}
+                </Button>
+              ))}
+            </Stack>
+          );
+        })}
+      </Stack>
+    </Paper>
   );
 }
 
