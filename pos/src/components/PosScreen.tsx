@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   AppBar, Badge, Box, Button, Chip, Divider, IconButton, InputAdornment,
-  Paper, Stack, TextField, Toolbar, Typography,
+  Paper, Stack, Tab, Tabs, TextField, Toolbar, Typography, useMediaQuery, useTheme,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
@@ -11,6 +11,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import HistoryIcon from "@mui/icons-material/History";
+import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import {
   getCachedProducts, getLocalStock, deductLocalStock,
   addPendingSale, getPendingSales, type PosProduct, type PosVariant, type PosConfig,
@@ -31,6 +33,8 @@ interface CartLine {
 // ─── Main POS screen ─────────────────────────────────────────────────────────
 
 export default function PosScreen({ config, onReset }: { config: PosConfig; onReset: () => void }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [products, setProducts] = useState<PosProduct[]>([]);
   const [stock, setStock] = useState<Record<string, number>>({});
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -39,6 +43,9 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
   const [pendingCount, setPendingCount] = useState(0);
   const [showCart, setShowCart] = useState(false);
   const [saleComplete, setSaleComplete] = useState(false);
+  const [activeTab, setActiveTab] = useState(0); // 0=sell, 1=history
+  const [pendingSales, setPendingSales] = useState<PendingSale[]>([]);
+  const [editingSale, setEditingSale] = useState<PendingSale | null>(null);
 
   // Load cached data on mount
   useEffect(() => {
@@ -97,7 +104,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     });
 
     // Show cart on mobile after adding
-    if (window.innerWidth < 900) setShowCart(true);
+    if (isMobile) setShowCart(true);
   };
 
   const adjustCartQty = (lineId: string, delta: number) => {
@@ -147,10 +154,10 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     setStock(freshStock);
     setPendingCount((c) => c + 1);
 
-    // Show confirmation
+    // Show confirmation, then return to products
     setSaleComplete(true);
     setCart([]);
-    setTimeout(() => setSaleComplete(false), 2000);
+    setTimeout(() => { setSaleComplete(false); setShowCart(false); }, 2000);
 
     // Try to sync immediately (best effort)
     try { await fullSync(); } catch { /* offline — will sync later */ }
@@ -204,7 +211,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
         {/* Product list */}
         <Box sx={{
           flex: 1,
-          display: showCart && window.innerWidth < 900 ? "none" : "flex",
+          display: showCart && isMobile ? "none" : "flex",
           flexDirection: "column",
           overflow: "hidden",
         }}>
@@ -247,7 +254,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
         {/* Cart panel */}
         <Box sx={{
           width: { xs: "100%", md: 360 },
-          display: !showCart && window.innerWidth < 900 ? "none" : "flex",
+          display: !showCart && isMobile ? "none" : "flex",
           flexDirection: "column",
           borderLeft: { md: "1px solid" },
           borderColor: "divider",
@@ -255,6 +262,11 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
         }}>
           <Box sx={{ p: 1.5, borderBottom: 1, borderColor: "divider" }}>
             <Stack direction="row" alignItems="center">
+              {isMobile && (
+                <Button size="small" onClick={() => setShowCart(false)} sx={{ mr: 1, minWidth: 0 }}>
+                  ← Products
+                </Button>
+              )}
               <Typography variant="subtitle1" fontWeight="bold" sx={{ flex: 1 }}>
                 Cart
                 {cartItems > 0 && <Chip label={cartItems} size="small" color="primary" sx={{ ml: 1 }} />}
@@ -326,7 +338,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
       </Box>
 
       {/* Mobile cart toggle FAB */}
-      {window.innerWidth < 900 && (
+      {isMobile && (
         <Box sx={{ position: "fixed", bottom: 16, right: 16, zIndex: 10 }}>
           <IconButton
             onClick={() => setShowCart((v) => !v)}
