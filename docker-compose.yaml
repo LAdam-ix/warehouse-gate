@@ -16,3 +16,11 @@ services:
       - "8273:80"
     depends_on:
       - backend
+
+  pos:
+    build: ./pos
+    restart: always
+    ports:
+      - "7646:80"
+    depends_on:
+      - backend
