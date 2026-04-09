@@ -51,6 +51,7 @@ export interface PendingSale {
     location: string | null;
   }>;
   discountPercentage?: string;
+  discountFixed?: string;
   note: string;
   deviceCreatedAt: string; // ISO timestamp when the sale happened on device
   locationId: string;
