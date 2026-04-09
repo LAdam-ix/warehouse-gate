@@ -269,7 +269,18 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     setPushing(false);
   };
 
-  const getStock = (variantId: string) => stock[`${variantId}:${viewLocationId}`] ?? 0;
+  const getStock = (variantId: string) => {
+    // Local stock map is authoritative for the configured location (accounts for unsynced sales)
+    if (viewLocationId === config.locationId) {
+      return stock[`${variantId}:${viewLocationId}`] ?? 0;
+    }
+    // For other locations, read from synced product data
+    for (const p of products) {
+      const v = p.variants.find((v) => v.id === variantId);
+      if (v) return v.stockByLocation?.[viewLocationId] ?? 0;
+    }
+    return 0;
+  };
 
   // ─── Product actions ─────────────────────────────────────────────────────
 
@@ -918,6 +929,70 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
   );
 }
 
+// ─── Editor line row with collapsible discount ──────────────────────────────
+
+function EditorLineRow({ line, idx, adjustQty, setLines }: {
+  line: PendingSale["lines"][0];
+  idx: number;
+  adjustQty: (idx: number, delta: number) => void;
+  setLines: React.Dispatch<React.SetStateAction<PendingSale["lines"]>>;
+}) {
+  const ld = parseFloat(line.discountAmount || "0");
+  const hasDiscount = ld > 0 || (line.discountNote ?? "").length > 0;
+  const [discountOpen, setDiscountOpen] = useState(hasDiscount);
+
+  return (
+    <Box>
+      <Stack direction="row" alignItems="center" spacing={0.75}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="body2" noWrap>{line.description}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            €{line.unitPrice}{ld > 0 ? ` -€${line.discountAmount}` : ""} × {line.quantity}
+          </Typography>
+        </Box>
+        <IconButton size="small" onClick={() => adjustQty(idx, -1)}>
+          <RemoveCircleOutlineIcon sx={{ fontSize: 18, color: "error.light" }} />
+        </IconButton>
+        <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 20, textAlign: "center" }}>
+          {line.quantity}
+        </Typography>
+        <IconButton size="small" onClick={() => adjustQty(idx, 1)}>
+          <AddCircleOutlineIcon sx={{ fontSize: 18, color: "success.main" }} />
+        </IconButton>
+        <IconButton size="small" onClick={() => setLines((p) => p.filter((_, i) => i !== idx))}>
+          <DeleteIcon sx={{ fontSize: 16 }} />
+        </IconButton>
+      </Stack>
+      {!discountOpen ? (
+        <Typography variant="caption" color="primary" sx={{ cursor: "pointer", pl: 0.5, mt: 0.25, display: "block" }}
+          onClick={() => setDiscountOpen(true)}>
+          + Discount
+        </Typography>
+      ) : (
+        <Stack direction="row" spacing={0.5} sx={{ pl: 0.5, mt: 0.5 }}>
+          <TextField size="small" placeholder="€" type="number"
+            value={(line.discountAmount ?? "0") === "0" ? "" : line.discountAmount}
+            onChange={(e) => setLines((p) => p.map((l, i) => i === idx ? { ...l, discountAmount: e.target.value || "0" } : l))}
+            sx={{ width: 70, "& .MuiInputBase-root": { height: 24, fontSize: "0.7rem" } }}
+            slotProps={{ htmlInput: { step: "0.01", min: 0 } }}
+          />
+          <TextField size="small" placeholder="Note"
+            value={line.discountNote ?? ""}
+            onChange={(e) => setLines((p) => p.map((l, i) => i === idx ? { ...l, discountNote: e.target.value } : l))}
+            sx={{ flex: 1, "& .MuiInputBase-root": { height: 24, fontSize: "0.7rem" } }}
+          />
+          <IconButton size="small" onClick={() => {
+            setLines((p) => p.map((l, i) => i === idx ? { ...l, discountAmount: "0", discountNote: "" } : l));
+            setDiscountOpen(false);
+          }}>
+            <CloseIcon sx={{ fontSize: 14 }} />
+          </IconButton>
+        </Stack>
+      )}
+    </Box>
+  );
+}
+
 // ─── Sale editor (for unsynced local sales) ──────────────────────────────────
 
 function SaleEditor({
@@ -966,46 +1041,9 @@ function SaleEditor({
 
       <Paper variant="outlined" sx={{ p: 1.5 }}>
         <Stack spacing={1}>
-          {lines.map((line, idx) => {
-            const ld = parseFloat(line.discountAmount || "0");
-            return (
-              <Box key={idx}>
-                <Stack direction="row" alignItems="center" spacing={0.75}>
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body2" noWrap>{line.description}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      €{line.unitPrice}{ld > 0 ? ` -€${line.discountAmount}` : ""} × {line.quantity}
-                    </Typography>
-                  </Box>
-                  <IconButton size="small" onClick={() => adjustQty(idx, -1)}>
-                    <RemoveCircleOutlineIcon sx={{ fontSize: 18, color: "error.light" }} />
-                  </IconButton>
-                  <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 20, textAlign: "center" }}>
-                    {line.quantity}
-                  </Typography>
-                  <IconButton size="small" onClick={() => adjustQty(idx, 1)}>
-                    <AddCircleOutlineIcon sx={{ fontSize: 18, color: "success.main" }} />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => setLines((p) => p.filter((_, i) => i !== idx))}>
-                    <DeleteIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                </Stack>
-                <Stack direction="row" spacing={0.5} sx={{ pl: 0.5, mt: 0.25 }}>
-                  <TextField size="small" placeholder="Discount €" type="number"
-                    value={(line.discountAmount ?? "0") === "0" ? "" : line.discountAmount}
-                    onChange={(e) => setLines((p) => p.map((l, i) => i === idx ? { ...l, discountAmount: e.target.value || "0" } : l))}
-                    sx={{ width: 80, "& .MuiInputBase-root": { height: 24, fontSize: "0.7rem" } }}
-                    slotProps={{ htmlInput: { step: "0.01", min: 0 } }}
-                  />
-                  <TextField size="small" placeholder="Note"
-                    value={line.discountNote ?? ""}
-                    onChange={(e) => setLines((p) => p.map((l, i) => i === idx ? { ...l, discountNote: e.target.value } : l))}
-                    sx={{ flex: 1, "& .MuiInputBase-root": { height: 24, fontSize: "0.7rem" } }}
-                  />
-                </Stack>
-              </Box>
-            );
-          })}
+          {lines.map((line, idx) => (
+            <EditorLineRow key={idx} line={line} idx={idx} adjustQty={adjustQty} setLines={setLines} />
+          ))}
         </Stack>
       </Paper>
 
@@ -1018,15 +1056,15 @@ function SaleEditor({
       />
 
       <Stack direction="row" spacing={0.75}>
-        <TextField size="small" type="number" placeholder="Discount %" value={editDiscountPct}
+        <TextField size="small" type="number" label="Discount %" value={editDiscountPct}
           onChange={(e) => setEditDiscountPct(e.target.value)}
-          sx={{ flex: 1, "& .MuiInputBase-root": { height: 30, fontSize: "0.8rem" } }}
-          slotProps={{ htmlInput: { step: "0.5", min: 0, max: 100 } }}
+          sx={{ flex: 1 }}
+          slotProps={{ htmlInput: { step: "0.5", min: 0, max: 100 }, inputLabel: { shrink: true } }}
         />
-        <TextField size="small" type="number" placeholder="Flat €" value={editDiscountFixed}
+        <TextField size="small" type="number" label="Flat discount €" value={editDiscountFixed}
           onChange={(e) => setEditDiscountFixed(e.target.value)}
-          sx={{ flex: 1, "& .MuiInputBase-root": { height: 30, fontSize: "0.8rem" } }}
-          slotProps={{ htmlInput: { step: "0.01", min: 0 } }}
+          sx={{ flex: 1 }}
+          slotProps={{ htmlInput: { step: "0.01", min: 0 }, inputLabel: { shrink: true } }}
         />
       </Stack>
 
