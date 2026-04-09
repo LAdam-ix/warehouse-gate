@@ -35,6 +35,8 @@ interface CartLine {
   unitPrice: string;
   quantity: number;
   photo: string | null;
+  discountAmount: string;
+  discountNote: string;
 }
 
 // ─── Main POS screen ─────────────────────────────────────────────────────────
@@ -45,6 +47,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
   const [products, setProducts] = useState<PosProduct[]>([]);
   const [stock, setStock] = useState<Record<string, number>>({});
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [saleDiscountPct, setSaleDiscountPct] = useState("");
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [pushing, setPushing] = useState(false);
@@ -125,6 +128,8 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
         unitPrice: variant.effectivePrice,
         quantity: 1,
         photo: variant.galleryPhotoUrl ?? product.primaryPhoto,
+        discountAmount: "0",
+        discountNote: "",
       }];
     });
     if (isMobile) setShowCart(true);
@@ -155,8 +160,11 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
       description: l.label,
       quantity: String(l.quantity),
       unitPrice: l.unitPrice,
+      discountAmount: l.discountAmount !== "0" ? l.discountAmount : undefined,
+      discountNote: l.discountNote || undefined,
       location: config.locationId,
     })),
+    discountPercentage: saleDiscountPct || undefined,
     note: "",
     deviceCreatedAt: new Date().toISOString(),
     locationId: config.locationId,
@@ -182,6 +190,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
 
     setSaleComplete(true);
     setCart([]);
+    setSaleDiscountPct("");
     setLoadedDraftId(null);
     setTimeout(() => { setSaleComplete(false); setShowCart(false); }, 2000);
   };
@@ -203,6 +212,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     }
     await refreshPending();
     setCart([]);
+    setSaleDiscountPct("");
     setLoadedDraftId(null);
   };
 
@@ -227,6 +237,8 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
             unitPrice: line.unitPrice,
             quantity: available,
             photo: null,
+            discountAmount: line.discountAmount ?? "0",
+            discountNote: line.discountNote ?? "",
           });
         }
       } else {
@@ -237,6 +249,8 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
           unitPrice: line.unitPrice,
           quantity: qty,
           photo: null,
+          discountAmount: line.discountAmount ?? "0",
+          discountNote: line.discountNote ?? "",
         });
       }
     }
@@ -252,6 +266,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     }
 
     setCart(loadableLines);
+    setSaleDiscountPct(sale.discountPercentage ?? "");
     setLoadedDraftId(sale.id);
     setActiveTab(0); // switch to sell tab
     if (isMobile) setShowCart(true);
@@ -333,7 +348,10 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     return true;
   });
 
-  const cartTotal = cart.reduce((s, l) => s + parseFloat(l.unitPrice) * l.quantity, 0);
+  const cartSubtotal = cart.reduce((s, l) => s + parseFloat(l.unitPrice) * l.quantity, 0);
+  const cartLineDiscounts = cart.reduce((s, l) => s + parseFloat(l.discountAmount || "0") * l.quantity, 0);
+  const pctDiscount = saleDiscountPct ? (cartSubtotal - cartLineDiscounts) * (parseFloat(saleDiscountPct) / 100) : 0;
+  const cartTotal = cartSubtotal - cartLineDiscounts - pctDiscount;
   const cartItems = cart.reduce((s, l) => s + l.quantity, 0);
 
   // ─── Render ──────────────────────────────────────────────────────────────
@@ -477,37 +495,90 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
                 </Typography>
               ) : (
                 <Stack spacing={1}>
-                  {cart.map((line) => (
-                    <Stack key={line.id} direction="row" alignItems="center" spacing={0.75}>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" noWrap fontWeight="medium">{line.label}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          €{line.unitPrice} × {line.quantity} = €{(parseFloat(line.unitPrice) * line.quantity).toFixed(2)}
-                        </Typography>
+                  {cart.map((line) => {
+                    const lineDiscount = parseFloat(line.discountAmount || "0");
+                    const lineTotal = (parseFloat(line.unitPrice) - lineDiscount) * line.quantity;
+                    return (
+                      <Box key={line.id}>
+                        <Stack direction="row" alignItems="center" spacing={0.75}>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="body2" noWrap fontWeight="medium">{line.label}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              €{line.unitPrice}{lineDiscount > 0 ? ` -€${line.discountAmount}` : ""} × {line.quantity} = €{lineTotal.toFixed(2)}
+                            </Typography>
+                          </Box>
+                          <IconButton size="small" onClick={() => adjustCartQty(line.id, -1)}>
+                            <RemoveCircleOutlineIcon sx={{ fontSize: 18, color: "error.light" }} />
+                          </IconButton>
+                          <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 20, textAlign: "center" }}>
+                            {line.quantity}
+                          </Typography>
+                          <IconButton size="small" onClick={() => adjustCartQty(line.id, 1)}>
+                            <AddCircleOutlineIcon sx={{ fontSize: 18, color: "success.main" }} />
+                          </IconButton>
+                          <IconButton size="small" onClick={() => setCart((p) => p.filter((l) => l.id !== line.id))}>
+                            <DeleteIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Stack>
+                        {/* Inline discount — tap to expand */}
+                        <Stack direction="row" spacing={0.5} sx={{ pl: 0.5, mt: 0.25 }}>
+                          <TextField
+                            size="small"
+                            placeholder="Discount €"
+                            type="number"
+                            value={line.discountAmount === "0" ? "" : line.discountAmount}
+                            onChange={(e) => setCart((p) => p.map((l) => l.id === line.id ? { ...l, discountAmount: e.target.value || "0" } : l))}
+                            sx={{ width: 80, "& .MuiInputBase-root": { height: 24, fontSize: "0.7rem" } }}
+                            slotProps={{ htmlInput: { step: "0.01", min: 0 } }}
+                          />
+                          <TextField
+                            size="small"
+                            placeholder="Note"
+                            value={line.discountNote}
+                            onChange={(e) => setCart((p) => p.map((l) => l.id === line.id ? { ...l, discountNote: e.target.value } : l))}
+                            sx={{ flex: 1, "& .MuiInputBase-root": { height: 24, fontSize: "0.7rem" } }}
+                          />
+                        </Stack>
                       </Box>
-                      <IconButton size="small" onClick={() => adjustCartQty(line.id, -1)}>
-                        <RemoveCircleOutlineIcon sx={{ fontSize: 18, color: "error.light" }} />
-                      </IconButton>
-                      <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 20, textAlign: "center" }}>
-                        {line.quantity}
-                      </Typography>
-                      <IconButton size="small" onClick={() => adjustCartQty(line.id, 1)}>
-                        <AddCircleOutlineIcon sx={{ fontSize: 18, color: "success.main" }} />
-                      </IconButton>
-                      <IconButton size="small" onClick={() => setCart((p) => p.filter((l) => l.id !== line.id))}>
-                        <DeleteIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Stack>
-                  ))}
+                    );
+                  })}
                 </Stack>
               )}
             </Box>
 
             <Box sx={{ p: 1.5, borderTop: 1, borderColor: "divider" }}>
-              <Stack direction="row" justifyContent="space-between" sx={{ mb: 1.5 }}>
+              {(cartLineDiscounts > 0 || pctDiscount > 0) && (
+                <Stack spacing={0.25} sx={{ mb: 1 }}>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+                    <Typography variant="body2">€{cartSubtotal.toFixed(2)}</Typography>
+                  </Stack>
+                  {cartLineDiscounts > 0 && (
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" color="warning.main">Line discounts</Typography>
+                      <Typography variant="body2" color="warning.main">-€{cartLineDiscounts.toFixed(2)}</Typography>
+                    </Stack>
+                  )}
+                  {pctDiscount > 0 && (
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" color="warning.main">Sale -{saleDiscountPct}%</Typography>
+                      <Typography variant="body2" color="warning.main">-€{pctDiscount.toFixed(2)}</Typography>
+                    </Stack>
+                  )}
+                </Stack>
+              )}
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                 <Typography variant="h6" fontWeight="bold">Total</Typography>
                 <Typography variant="h6" fontWeight="bold">€{cartTotal.toFixed(2)}</Typography>
               </Stack>
+              <TextField
+                size="small" type="number" fullWidth
+                placeholder="Sale discount %"
+                value={saleDiscountPct}
+                onChange={(e) => setSaleDiscountPct(e.target.value)}
+                sx={{ mb: 1.5, "& .MuiInputBase-root": { height: 30, fontSize: "0.8rem" } }}
+                slotProps={{ htmlInput: { step: "0.5", min: 0, max: 100 } }}
+              />
               {loadedDraftId && (
                 <Typography variant="caption" color="info.main" sx={{ mb: 1, display: "block" }}>
                   Loaded from draft — complete to finalize or save to update draft
@@ -704,6 +775,7 @@ function SaleEditor({
 }) {
   const [lines, setLines] = useState(sale.lines);
   const [note, setNote] = useState(sale.note);
+  const [editDiscountPct, setEditDiscountPct] = useState(sale.discountPercentage ?? "");
 
   const adjustQty = (idx: number, delta: number) => {
     setLines((prev) => {
@@ -718,7 +790,10 @@ function SaleEditor({
     });
   };
 
-  const total = lines.reduce((s, l) => s + parseFloat(l.unitPrice) * parseInt(l.quantity), 0);
+  const subtotal = lines.reduce((s, l) => s + parseFloat(l.unitPrice) * parseInt(l.quantity), 0);
+  const lineDiscounts = lines.reduce((s, l) => s + parseFloat(l.discountAmount || "0") * parseInt(l.quantity), 0);
+  const pctDisc = editDiscountPct ? (subtotal - lineDiscounts) * (parseFloat(editDiscountPct) / 100) : 0;
+  const total = subtotal - lineDiscounts - pctDisc;
 
   return (
     <Stack spacing={2}>
@@ -731,28 +806,46 @@ function SaleEditor({
 
       <Paper variant="outlined" sx={{ p: 1.5 }}>
         <Stack spacing={1}>
-          {lines.map((line, idx) => (
-            <Stack key={idx} direction="row" alignItems="center" spacing={0.75}>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" noWrap>{line.description}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  €{line.unitPrice} × {line.quantity}
-                </Typography>
+          {lines.map((line, idx) => {
+            const ld = parseFloat(line.discountAmount || "0");
+            return (
+              <Box key={idx}>
+                <Stack direction="row" alignItems="center" spacing={0.75}>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" noWrap>{line.description}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      €{line.unitPrice}{ld > 0 ? ` -€${line.discountAmount}` : ""} × {line.quantity}
+                    </Typography>
+                  </Box>
+                  <IconButton size="small" onClick={() => adjustQty(idx, -1)}>
+                    <RemoveCircleOutlineIcon sx={{ fontSize: 18, color: "error.light" }} />
+                  </IconButton>
+                  <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 20, textAlign: "center" }}>
+                    {line.quantity}
+                  </Typography>
+                  <IconButton size="small" onClick={() => adjustQty(idx, 1)}>
+                    <AddCircleOutlineIcon sx={{ fontSize: 18, color: "success.main" }} />
+                  </IconButton>
+                  <IconButton size="small" onClick={() => setLines((p) => p.filter((_, i) => i !== idx))}>
+                    <DeleteIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Stack>
+                <Stack direction="row" spacing={0.5} sx={{ pl: 0.5, mt: 0.25 }}>
+                  <TextField size="small" placeholder="Discount €" type="number"
+                    value={(line.discountAmount ?? "0") === "0" ? "" : line.discountAmount}
+                    onChange={(e) => setLines((p) => p.map((l, i) => i === idx ? { ...l, discountAmount: e.target.value || "0" } : l))}
+                    sx={{ width: 80, "& .MuiInputBase-root": { height: 24, fontSize: "0.7rem" } }}
+                    slotProps={{ htmlInput: { step: "0.01", min: 0 } }}
+                  />
+                  <TextField size="small" placeholder="Note"
+                    value={line.discountNote ?? ""}
+                    onChange={(e) => setLines((p) => p.map((l, i) => i === idx ? { ...l, discountNote: e.target.value } : l))}
+                    sx={{ flex: 1, "& .MuiInputBase-root": { height: 24, fontSize: "0.7rem" } }}
+                  />
+                </Stack>
               </Box>
-              <IconButton size="small" onClick={() => adjustQty(idx, -1)}>
-                <RemoveCircleOutlineIcon sx={{ fontSize: 18, color: "error.light" }} />
-              </IconButton>
-              <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 20, textAlign: "center" }}>
-                {line.quantity}
-              </Typography>
-              <IconButton size="small" onClick={() => adjustQty(idx, 1)}>
-                <AddCircleOutlineIcon sx={{ fontSize: 18, color: "success.main" }} />
-              </IconButton>
-              <IconButton size="small" onClick={() => setLines((p) => p.filter((_, i) => i !== idx))}>
-                <DeleteIcon sx={{ fontSize: 16 }} />
-              </IconButton>
-            </Stack>
-          ))}
+            );
+          })}
         </Stack>
       </Paper>
 
@@ -764,6 +857,12 @@ function SaleEditor({
         onChange={(e) => setNote(e.target.value)}
       />
 
+      <TextField size="small" type="number" fullWidth placeholder="Sale discount %"
+        value={editDiscountPct} onChange={(e) => setEditDiscountPct(e.target.value)}
+        sx={{ "& .MuiInputBase-root": { height: 30, fontSize: "0.8rem" } }}
+        slotProps={{ htmlInput: { step: "0.5", min: 0, max: 100 } }}
+      />
+
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="h6" fontWeight="bold">Total: €{total.toFixed(2)}</Typography>
       </Stack>
@@ -772,7 +871,7 @@ function SaleEditor({
         <Button
           variant="contained"
           fullWidth
-          onClick={() => onSave({ ...sale, lines, note })}
+          onClick={() => onSave({ ...sale, lines, note, discountPercentage: editDiscountPct || undefined })}
           disabled={lines.length === 0}
         >
           Save changes
@@ -798,7 +897,10 @@ function SaleCard({
   onDelete: () => void;
   onLoad?: () => void;
 }) {
-  const total = sale.lines.reduce((s, l) => s + parseFloat(l.unitPrice) * parseInt(l.quantity), 0);
+  const sub = sale.lines.reduce((s, l) => s + parseFloat(l.unitPrice) * parseInt(l.quantity), 0);
+  const ld = sale.lines.reduce((s, l) => s + parseFloat(l.discountAmount || "0") * parseInt(l.quantity), 0);
+  const pd = sale.discountPercentage ? (sub - ld) * (parseFloat(sale.discountPercentage) / 100) : 0;
+  const total = sub - ld - pd;
   const items = sale.lines.reduce((s, l) => s + parseInt(l.quantity), 0);
   const isDraft = sale.status === "draft";
 

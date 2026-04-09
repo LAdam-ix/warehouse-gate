@@ -88,9 +88,10 @@ export async function pushPendingSales(): Promise<{ synced: number; failed: numb
           quantity: l.quantity,
           unitPrice: l.unitPrice,
           location: l.location,
-          discountAmount: "0",
-          discountNote: "",
+          discountAmount: l.discountAmount || "0",
+          discountNote: l.discountNote || "",
         })),
+        discountPercentage: sale.discountPercentage || "0",
         note: `[POS: ${sale.deviceName || sale.deviceId.slice(0, 8)} | ${new Date(sale.deviceCreatedAt).toLocaleString()}]${sale.note ? ` ${sale.note}` : ""}`,
         deviceCreatedAt: sale.deviceCreatedAt,
       });

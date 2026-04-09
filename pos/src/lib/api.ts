@@ -101,6 +101,7 @@ interface SaleLinePayload {
 
 export async function pushSale(sale: {
   lines: SaleLinePayload[];
+  discountPercentage?: string;
   note: string;
   deviceCreatedAt: string;
 }): Promise<{ id: string }> {
@@ -109,6 +110,7 @@ export async function pushSale(sale: {
     method: "POST",
     body: JSON.stringify({
       note: sale.note || undefined,
+      discountPercentage: sale.discountPercentage || undefined,
       source: "pos",
       deviceCreatedAt: sale.deviceCreatedAt,
     }),
