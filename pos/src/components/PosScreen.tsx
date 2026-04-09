@@ -21,7 +21,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import {
   getCachedProducts, getLocalStock, deductLocalStock,
   addPendingSale, getPendingSales, removePendingSale, updatePendingSale,
-  addPendingProduction, getPendingProductions, removePendingProduction,
+  addPendingProduction, getPendingProductions, updatePendingProduction, removePendingProduction,
   type PosProduct, type PosVariant, type PosConfig, type PendingSale, type PendingProduction,
 } from "../lib/db";
 import { autoSync, pushPendingSales, pushPendingProductions, syncProducts } from "../lib/sync";
@@ -134,6 +134,67 @@ function CartLineRow({ line, setCart, adjustCartQty }: {
         </Stack>
       )}
     </Box>
+  );
+}
+
+// ─── Pending production row with editable qty ───────────────────────────────
+
+function PendingProductionRow({ req, onUpdate, onDelete }: {
+  req: PendingProduction;
+  onUpdate: (updated: PendingProduction) => void;
+  onDelete: () => void;
+}) {
+  const [editingQty, setEditingQty] = useState(false);
+  const [qtyInput, setQtyInput] = useState("");
+
+  const adjustQty = (delta: number) => {
+    const newQty = req.quantity + delta;
+    if (newQty <= 0) { onDelete(); return; }
+    onUpdate({ ...req, quantity: newQty });
+  };
+
+  const commitQty = () => {
+    const n = parseInt(qtyInput);
+    if (n > 0) { onUpdate({ ...req, quantity: n }); }
+    else { onDelete(); }
+    setEditingQty(false);
+  };
+
+  return (
+    <Paper variant="outlined" sx={{ p: 1, borderColor: "info.light" }}>
+      <Stack direction="row" alignItems="center" spacing={0.75}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="body2" fontWeight="medium" noWrap>{req.description}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            {new Date(req.deviceCreatedAt).toLocaleTimeString()}
+          </Typography>
+        </Box>
+        <IconButton size="small" onClick={() => adjustQty(-1)}>
+          <RemoveCircleOutlineIcon sx={{ fontSize: 18, color: "error.light" }} />
+        </IconButton>
+        {editingQty ? (
+          <TextField size="small" type="number" autoFocus value={qtyInput}
+            onChange={(e) => setQtyInput(e.target.value)}
+            onBlur={commitQty}
+            onKeyDown={(e) => { if (e.key === "Enter") commitQty(); }}
+            sx={{ width: 44, "& .MuiInputBase-root": { height: 28, fontSize: "0.85rem" }, "& input": { textAlign: "center", p: 0.5 } }}
+            slotProps={{ htmlInput: { min: 0, inputMode: "numeric" } }}
+          />
+        ) : (
+          <Typography variant="body2" fontWeight="bold"
+            sx={{ minWidth: 28, textAlign: "center", cursor: "pointer", bgcolor: "grey.100", borderRadius: 0.5, px: 0.5, py: 0.25 }}
+            onClick={() => { setQtyInput(String(req.quantity)); setEditingQty(true); }}>
+            {req.quantity}
+          </Typography>
+        )}
+        <IconButton size="small" onClick={() => adjustQty(1)}>
+          <AddCircleOutlineIcon sx={{ fontSize: 18, color: "success.main" }} />
+        </IconButton>
+        <IconButton size="small" onClick={onDelete}>
+          <DeleteIcon sx={{ fontSize: 16, color: "error.main" }} />
+        </IconButton>
+      </Stack>
+    </Paper>
   );
 }
 
@@ -403,18 +464,24 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
       ? product.name
       : `${product.name} — ${variant.attributeValues.map((a) => a.value).join(", ")}`;
 
-    const req: PendingProduction = {
-      id: crypto.randomUUID(),
-      deviceId: config.deviceId,
-      deviceName: config.deviceName,
-      variantId: variant.id,
-      description: label,
-      quantity: qty,
-      locationId: config.locationId,
-      note: "",
-      deviceCreatedAt: new Date().toISOString(),
-    };
-    await addPendingProduction(req);
+    // Merge into existing pending request for same variant
+    const existing = pendingProductions.find((r) => r.variantId === variant.id);
+    if (existing) {
+      const updated = { ...existing, quantity: existing.quantity + qty };
+      await updatePendingProduction(updated);
+    } else {
+      await addPendingProduction({
+        id: crypto.randomUUID(),
+        deviceId: config.deviceId,
+        deviceName: config.deviceName,
+        variantId: variant.id,
+        description: label,
+        quantity: qty,
+        locationId: config.locationId,
+        note: "",
+        deviceCreatedAt: new Date().toISOString(),
+      });
+    }
     setPendingProductions(await getPendingProductions());
   };
 
@@ -504,7 +571,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
         >
           <Tab icon={<PointOfSaleIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Sell" />
           <Tab icon={<HistoryIcon sx={{ fontSize: 16 }} />} iconPosition="start" label={`History (${pendingSales.length})`} />
-          <Tab icon={<PrecisionManufacturingIcon sx={{ fontSize: 16 }} />} iconPosition="start" label={`Produce (${pendingProductions.length})`} />
+          <Tab icon={<PrecisionManufacturingIcon sx={{ fontSize: 16 }} />} iconPosition="start" label={`Produce (${pendingProductions.reduce((s, r) => s + r.quantity, 0)})`} />
         </Tabs>
       </AppBar>
 
@@ -800,19 +867,9 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
                     </Button>
                   </Stack>
                   {pendingProductions.map((req) => (
-                    <Paper key={req.id} variant="outlined" sx={{ p: 1, borderColor: "info.light" }}>
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="body2" fontWeight="medium">{req.description}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            ×{req.quantity} — {new Date(req.deviceCreatedAt).toLocaleTimeString()}
-                          </Typography>
-                        </Box>
-                        <IconButton size="small" onClick={() => handleDeleteProduction(req.id)}>
-                          <DeleteIcon sx={{ fontSize: 16, color: "error.main" }} />
-                        </IconButton>
-                      </Stack>
-                    </Paper>
+                    <PendingProductionRow key={req.id} req={req}
+                      onUpdate={async (updated) => { await updatePendingProduction(updated); setPendingProductions(await getPendingProductions()); }}
+                      onDelete={() => handleDeleteProduction(req.id)} />
                   ))}
                   <Divider sx={{ my: 1 }} />
                 </>

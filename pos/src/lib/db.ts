@@ -149,6 +149,11 @@ export async function addPendingProduction(req: PendingProduction): Promise<void
   await set("pos_pending_productions", pending);
 }
 
+export async function updatePendingProduction(updated: PendingProduction): Promise<void> {
+  const pending = await getPendingProductions();
+  await set("pos_pending_productions", pending.map((r) => r.id === updated.id ? updated : r));
+}
+
 export async function removePendingProduction(id: string): Promise<void> {
   const pending = await getPendingProductions();
   await set("pos_pending_productions", pending.filter((r) => r.id !== id));
