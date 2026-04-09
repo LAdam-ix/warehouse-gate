@@ -7,6 +7,7 @@ import { Box, CircularProgress } from "@mui/material";
 
 export default function App() {
   const [config, setConfig] = useState<PosConfig | null | "loading">("loading");
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     getConfig().then((c) => {
@@ -23,9 +24,18 @@ export default function App() {
     );
   }
 
-  if (!config) {
-    return <SetupScreen onComplete={(c) => { if (c.apiToken) setApiToken(c.apiToken); setConfig(c); }} />;
+  if (!config || showSettings) {
+    return (
+      <SetupScreen
+        existing={config || undefined}
+        onComplete={(c) => {
+          if (c.apiToken) setApiToken(c.apiToken);
+          setConfig(c);
+          setShowSettings(false);
+        }}
+      />
+    );
   }
 
-  return <PosScreen config={config} onReset={() => setConfig(null)} />;
+  return <PosScreen config={config} onReset={() => setShowSettings(true)} />;
 }

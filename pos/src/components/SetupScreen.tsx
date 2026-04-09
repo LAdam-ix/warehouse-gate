@@ -8,11 +8,11 @@ import { fetchLocations, type ApiLocation } from "../lib/api";
 import { setConfig, type PosConfig } from "../lib/db";
 import { syncProducts } from "../lib/sync";
 
-export default function SetupScreen({ onComplete }: { onComplete: (c: PosConfig) => void }) {
+export default function SetupScreen({ existing, onComplete }: { existing?: PosConfig; onComplete: (c: PosConfig) => void }) {
   const [locations, setLocations] = useState<ApiLocation[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const [deviceName, setDeviceName] = useState("");
-  const [token, setToken] = useState("");
+  const [selectedId, setSelectedId] = useState(existing?.locationId ?? "");
+  const [deviceName, setDeviceName] = useState(existing?.deviceName ?? "");
+  const [token, setToken] = useState(existing?.apiToken ?? "");
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState("");
@@ -21,8 +21,10 @@ export default function SetupScreen({ onComplete }: { onComplete: (c: PosConfig)
     fetchLocations()
       .then((locs) => {
         setLocations(locs);
-        const def = locs.find((l) => l.isDefault) ?? locs[0];
-        if (def) setSelectedId(def.id);
+        if (!selectedId) {
+          const def = locs.find((l) => l.isDefault) ?? locs[0];
+          if (def) setSelectedId(def.id);
+        }
         setLoading(false);
       })
       .catch(() => {
@@ -37,13 +39,13 @@ export default function SetupScreen({ onComplete }: { onComplete: (c: PosConfig)
 
     setSyncing(true);
     const config: PosConfig = {
-      deviceId: crypto.randomUUID(),
+      deviceId: existing?.deviceId ?? crypto.randomUUID(),
       deviceName: deviceName || `POS ${loc.name}`,
       locationId: loc.id,
       locationName: loc.name,
       apiToken: token || "",
-      lastProductSync: null,
-      lastSaleSync: null,
+      lastProductSync: existing?.lastProductSync ?? null,
+      lastSaleSync: existing?.lastSaleSync ?? null,
     };
     await setConfig(config);
 
@@ -66,9 +68,11 @@ export default function SetupScreen({ onComplete }: { onComplete: (c: PosConfig)
     }}>
       <Stack spacing={3} alignItems="center" sx={{ maxWidth: 360, width: "100%" }}>
         <WarehouseIcon sx={{ fontSize: 48, color: "primary.main" }} />
-        <Typography variant="h5" fontWeight="bold">POS Terminal Setup</Typography>
+        <Typography variant="h5" fontWeight="bold">{existing ? "POS Settings" : "POS Terminal Setup"}</Typography>
         <Typography variant="body2" color="text.secondary" textAlign="center">
-          Select the location this terminal serves. Products will be filtered to show stock at this location.
+          {existing
+            ? `Current: ${existing.locationName} — ${existing.deviceName}`
+            : "Select the location this terminal serves. Products will be filtered to show stock at this location."}
         </Typography>
 
         {loading ? (

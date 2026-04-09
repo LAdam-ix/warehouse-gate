@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  AppBar, Badge, Box, Button, Chip, Divider, IconButton, InputAdornment,
-  Paper, Stack, Tab, Tabs, TextField, Toolbar, Typography, useMediaQuery, useTheme,
+  AppBar, Badge, Box, Button, Chip, Divider, IconButton, InputAdornment, MenuItem,
+  Paper, Select, Stack, Tab, Tabs, TextField, Toolbar, Typography, useMediaQuery, useTheme,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
@@ -25,7 +25,7 @@ import {
   type PosProduct, type PosVariant, type PosConfig, type PendingSale, type PendingProduction,
 } from "../lib/db";
 import { autoSync, pushPendingSales, pushPendingProductions, syncProducts } from "../lib/sync";
-import { isOnline } from "../lib/api";
+import { isOnline, fetchLocations, type ApiLocation } from "../lib/api";
 
 // ─── Cart types ──────────────────────────────────────────────────────────────
 
@@ -215,6 +215,8 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
   const [showCart, setShowCart] = useState(false);
   const [saleComplete, setSaleComplete] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
+  const [viewLocationId, setViewLocationId] = useState(config.locationId);
+  const [allLocations, setAllLocations] = useState<ApiLocation[]>([]);
   const [pendingSales, setPendingSales] = useState<PendingSale[]>([]);
   const [editingSale, setEditingSale] = useState<PendingSale | null>(null);
   const [pendingProductions, setPendingProductions] = useState<PendingProduction[]>([]);
@@ -233,6 +235,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     getLocalStock().then(setStock);
     refreshPending();
     getPendingProductions().then(setPendingProductions);
+    fetchLocations().then(setAllLocations).catch(() => {});
   }, [refreshPending]);
 
   // Auto-sync products only (not sales)
@@ -266,7 +269,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     setPushing(false);
   };
 
-  const getStock = (variantId: string) => stock[`${variantId}:${config.locationId}`] ?? 0;
+  const getStock = (variantId: string) => stock[`${variantId}:${viewLocationId}`] ?? 0;
 
   // ─── Product actions ─────────────────────────────────────────────────────
 
@@ -537,12 +540,31 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
       <AppBar position="static" elevation={0} sx={{ bgcolor: "primary.main" }}>
         <Toolbar variant="dense">
           <Typography variant="h6" sx={{ flex: 1, fontWeight: "bold" }}>POS</Typography>
-          <Chip
-            label={config.locationName}
-            size="small"
-            sx={{ mr: 1, color: "white", borderColor: "rgba(255,255,255,0.5)" }}
-            variant="outlined"
-          />
+          {allLocations.length > 1 ? (
+            <Select
+              size="small"
+              value={viewLocationId}
+              onChange={(e) => setViewLocationId(e.target.value)}
+              sx={{ mr: 1, color: "white", fontSize: "0.8rem", height: 28,
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.4)" },
+                "& .MuiSelect-icon": { color: "rgba(255,255,255,0.7)" },
+                "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.7)" },
+              }}
+            >
+              {allLocations.map((l) => (
+                <MenuItem key={l.id} value={l.id} sx={{ fontSize: "0.8rem" }}>
+                  {l.name}{l.id === config.locationId ? " ★" : ""}
+                </MenuItem>
+              ))}
+            </Select>
+          ) : (
+            <Chip
+              label={config.locationName}
+              size="small"
+              sx={{ mr: 1, color: "white", borderColor: "rgba(255,255,255,0.5)" }}
+              variant="outlined"
+            />
+          )}
           {pendingSales.filter((s) => s.status === "completed").length > 0 && (
             <Chip label={`${pendingSales.filter((s) => s.status === "completed").length} to sync`} size="small" color="warning" sx={{ mr: 0.5 }} />
           )}
@@ -621,7 +643,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
                   <ProductCard
                     key={product.id}
                     product={product}
-                    locationId={config.locationId}
+                    locationId={viewLocationId}
                     stock={stock}
                     onAdd={addToCart}
                   />
