@@ -927,9 +927,11 @@ function ProductCard({
         onClick={() => onAdd(product, singleVariant)}
       >
         <Stack direction="row" alignItems="center" spacing={1.5}>
-          {product.primaryPhoto && (
+          {product.primaryPhoto ? (
             <Box component="img" src={product.primaryPhoto}
               sx={{ width: 44, height: 44, borderRadius: "4px", objectFit: "cover", flexShrink: 0 }} />
+          ) : (
+            <Box sx={{ width: 44, height: 44, borderRadius: "4px", bgcolor: "grey.100", flexShrink: 0 }} />
           )}
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="body2" fontWeight="bold" noWrap>{product.name}</Typography>
@@ -947,9 +949,11 @@ function ProductCard({
     <Paper variant="outlined" sx={{ overflow: "hidden" }}>
       <Box sx={{ px: 1.5, py: 1, bgcolor: "grey.50" }}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
-          {product.primaryPhoto && (
+          {product.primaryPhoto ? (
             <Box component="img" src={product.primaryPhoto}
               sx={{ width: 36, height: 36, borderRadius: "4px", objectFit: "cover", flexShrink: 0 }} />
+          ) : (
+            <Box sx={{ width: 36, height: 36, borderRadius: "4px", bgcolor: "grey.200", flexShrink: 0 }} />
           )}
           <Typography variant="body2" fontWeight="bold" sx={{ flex: 1 }}>{product.name}</Typography>
         </Stack>

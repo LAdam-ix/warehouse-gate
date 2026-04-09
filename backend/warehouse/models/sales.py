@@ -6,12 +6,18 @@ from .base import AuditModel
 
 class Sale(AuditModel):
     """
-    A sale transaction. Draft = being built. Finalized = stock deducted, profit counted.
+    A sale transaction.
+    - draft: being built in the main warehouse UI
+    - pending_review: created by POS terminal, stock deducted, editable for 5 days
+    - finalized: confirmed, stock deducted, immutable
+    - voided/discarded/refunded: reversed states
+
     invoice_id / credit_note_id are nullable UUIDs pointing to fakturuj si documents.
     Setting credit_note_id on a finalized sale triggers stock return.
     """
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
+        PENDING_REVIEW = "pending_review", "Pending Review"
         FINALIZED = "finalized", "Finalized"
         VOIDED = "voided", "Voided"
         DISCARDED = "discarded", "Discarded"
@@ -24,6 +30,20 @@ class Sale(AuditModel):
     # TODO: Remove customer_label — customer will come from the linked fakturuj si
     # invoice (via invoice_id) or a shared Customer model. Not displayed in the UI.
     customer_label = models.CharField(max_length=255, blank=True)
+
+    # POS terminal fields
+    source = models.CharField(
+        max_length=20, default="web", blank=True,
+        help_text="Origin: 'web' for main UI, 'pos' for POS terminal",
+    )
+    device_created_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the sale was created on the POS device (may differ from created_at due to offline sync delay)",
+    )
+    auto_confirm_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When pending_review sales auto-confirm (5 days after sync/upload)",
+    )
 
     # fakturuj si integration hooks (nullable until connected)
     invoice_id = models.UUIDField(null=True, blank=True, help_text="fakturuj si Invoice UUID")

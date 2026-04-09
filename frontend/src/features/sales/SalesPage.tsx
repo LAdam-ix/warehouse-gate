@@ -14,6 +14,7 @@ import { navLinkProps } from "../../utils/navLink";
 
 const STATUS_COLORS: Record<string, "warning" | "success" | "default" | "error" | "info"> = {
   draft: "warning",
+  pending_review: "info",
   finalized: "success",
   voided: "error",
   discarded: "default",

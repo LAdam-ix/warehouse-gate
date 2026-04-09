@@ -81,6 +81,9 @@ class SaleSerializer(serializers.ModelSerializer):
             "customer_label",
             "invoice_id",
             "credit_note_id",
+            "source",
+            "device_created_at",
+            "auto_confirm_at",
             "discount_percentage",
             "discount_fixed",
             "finalized_at",
@@ -95,7 +98,7 @@ class SaleSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = [
-            "id", "status", "finalized_at",
+            "id", "status", "finalized_at", "auto_confirm_at",
             "subtotal", "discount_total", "total", "cost_total", "profit",
             "created_at", "updated_at",
         ]
@@ -111,8 +114,8 @@ class SaleListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sale
         fields = [
-            "id", "status", "note", "customer_label", "invoice_id", "credit_note_id",
-            "total", "profit", "finalized_at", "line_count",
+            "id", "status", "source", "note", "customer_label", "invoice_id", "credit_note_id",
+            "total", "profit", "finalized_at", "auto_confirm_at", "line_count",
             "created_at", "updated_at",
         ]
         read_only_fields = fields

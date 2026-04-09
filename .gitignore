@@ -19,3 +19,4 @@ frontend/dist/
 
 # Runtime data (db + uploads) — created by Docker on the server
 data/
+pos/dist/
