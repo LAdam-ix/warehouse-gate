@@ -973,13 +973,16 @@ function ProductCard({
               sx={{ px: 1.5, py: 0.75, cursor: "pointer", "&:hover": { bgcolor: "action.hover" }, "&:active": { bgcolor: "action.selected" } }}
               onClick={() => onAdd(product, v)}
             >
-              {v.attributeValues.some((a) => a.colorHex) && (
+              {v.galleryPhotoUrl ? (
+                <Box component="img" src={v.galleryPhotoUrl}
+                  sx={{ width: 28, height: 28, borderRadius: "3px", objectFit: "cover", flexShrink: 0 }} />
+              ) : v.attributeValues.some((a) => a.colorHex) ? (
                 <Box sx={{
                   width: 14, height: 14, borderRadius: "50%",
                   bgcolor: v.attributeValues.find((a) => a.colorHex)?.colorHex,
                   border: "1px solid", borderColor: "divider", flexShrink: 0,
                 }} />
-              )}
+              ) : null}
               <Typography variant="body2" sx={{ flex: 1 }}>{vLabel}</Typography>
               {product.itemType === "physical" && (
                 <Chip label={qty} size="small" variant="outlined" sx={{ height: 18, fontSize: "0.7rem" }} />
