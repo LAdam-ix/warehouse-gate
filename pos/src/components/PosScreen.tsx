@@ -1248,7 +1248,7 @@ function ProductionCard({
         {variants.map((v) => {
           const vLabel = v.isDefault ? "Default" : v.attributeValues.map((a) => a.value).join(", ");
           return (
-            <Stack key={v.id} direction="row" alignItems="center" spacing={1} sx={{ px: 1.5, py: 0.75 }}>
+            <Stack key={v.id} direction="row" alignItems="center" spacing={1} sx={{ px: 1.5, py: 1.25 }}>
               {v.galleryPhotoUrl ? (
                 <Box component="img" src={v.galleryPhotoUrl}
                   sx={{ width: 24, height: 24, borderRadius: "3px", objectFit: "cover", flexShrink: 0 }} />
@@ -1339,7 +1339,7 @@ function ProductCard({
               direction="row"
               alignItems="center"
               spacing={1}
-              sx={{ px: 1.5, py: 0.75, cursor: "pointer", "&:hover": { bgcolor: "action.hover" }, "&:active": { bgcolor: "action.selected" } }}
+              sx={{ px: 1.5, py: 1.25, cursor: "pointer", "&:hover": { bgcolor: "action.hover" }, "&:active": { bgcolor: "action.selected" } }}
               onClick={() => onAdd(product, v)}
             >
               {v.galleryPhotoUrl ? (
