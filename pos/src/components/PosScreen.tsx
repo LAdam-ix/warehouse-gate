@@ -877,15 +877,25 @@ function ProductionCard({
 
   return (
     <Paper variant="outlined" sx={{ overflow: "hidden" }}>
-      <Box sx={{ px: 1.5, py: 1, bgcolor: "grey.50" }}>
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1.5, py: 1, bgcolor: "grey.50" }}>
+        {product.primaryPhoto && (
+          <Box component="img" src={product.primaryPhoto}
+            sx={{ width: 28, height: 28, borderRadius: "3px", objectFit: "cover", flexShrink: 0 }} />
+        )}
         <Typography variant="body2" fontWeight="bold">{product.name}</Typography>
-      </Box>
+      </Stack>
       <Divider />
       <Stack divider={<Divider />}>
         {variants.map((v) => {
           const vLabel = v.isDefault ? "Default" : v.attributeValues.map((a) => a.value).join(", ");
           return (
             <Stack key={v.id} direction="row" alignItems="center" spacing={1} sx={{ px: 1.5, py: 0.75 }}>
+              {v.galleryPhotoUrl ? (
+                <Box component="img" src={v.galleryPhotoUrl}
+                  sx={{ width: 24, height: 24, borderRadius: "3px", objectFit: "cover", flexShrink: 0 }} />
+              ) : v.attributeValues.some((a) => a.colorHex) ? (
+                <Box sx={{ width: 14, height: 14, borderRadius: "50%", bgcolor: v.attributeValues.find((a) => a.colorHex)?.colorHex, border: "1px solid", borderColor: "divider", flexShrink: 0 }} />
+              ) : null}
               <Typography variant="body2" sx={{ flex: 1 }}>{vLabel}</Typography>
               {[1, 5, 10].map((n) => (
                 <Button key={n} size="small" variant="outlined" sx={{ minWidth: 32, px: 0.5, fontSize: "0.7rem" }}
