@@ -200,6 +200,13 @@ function PendingProductionRow({ req, onUpdate, onDelete }: {
 
 // ─── Main POS screen ─────────────────────────────────────────────────────────
 
+const TAB_HASHES = ["#sell", "#history", "#produce"] as const;
+const hashToTab = (hash: string): number => {
+  if (hash === "#sell/cart") return 0;
+  const idx = TAB_HASHES.indexOf(hash as typeof TAB_HASHES[number]);
+  return idx >= 0 ? idx : 0;
+};
+
 export default function PosScreen({ config, onReset }: { config: PosConfig; onReset: () => void }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -212,9 +219,12 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [pushing, setPushing] = useState(false);
-  const [showCart, setShowCart] = useState(false);
+  const [showCart, setShowCart] = useState(() => location.hash === "#sell/cart");
   const [saleComplete, setSaleComplete] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = localStorage.getItem("pos_tab");
+    return hashToTab(location.hash || saved || "#sell");
+  });
   const [viewLocationId, setViewLocationId] = useState(config.locationId);
   const [allLocations, setAllLocations] = useState<ApiLocation[]>([]);
   const [pendingSales, setPendingSales] = useState<PendingSale[]>([]);
@@ -237,6 +247,47 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     getPendingProductions().then(setPendingProductions);
     fetchLocations().then(setAllLocations).catch(() => {});
   }, [refreshPending]);
+
+  // ─── Hash-based tab navigation (back button support) ─────────────────────
+  const changeTab = useCallback((tab: number, pushHistory = true) => {
+    setActiveTab(tab);
+    const hash = TAB_HASHES[tab] ?? "#sell";
+    localStorage.setItem("pos_tab", hash);
+    if (pushHistory && location.hash !== hash) {
+      history.pushState(null, "", hash);
+    }
+  }, []);
+
+  const openCart = useCallback(() => {
+    setShowCart(true);
+    if (isMobile) history.pushState(null, "", "#sell/cart");
+  }, [isMobile]);
+
+  const closeCart = useCallback(() => {
+    setShowCart(false);
+    if (isMobile && location.hash === "#sell/cart") history.back();
+  }, [isMobile]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = location.hash;
+      if (hash === "#sell/cart") {
+        setActiveTab(0);
+        setShowCart(true);
+      } else {
+        setShowCart(false);
+        setActiveTab(hashToTab(hash));
+      }
+      localStorage.setItem("pos_tab", hash);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    // Set initial hash if empty
+    if (!location.hash) {
+      const saved = localStorage.getItem("pos_tab") || "#sell";
+      history.replaceState(null, "", saved);
+    }
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   // Auto-sync products only (not sales)
   const handleProductSync = useCallback(async () => {
@@ -307,7 +358,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
         discountNote: "",
       }];
     });
-    if (isMobile) setShowCart(true);
+    if (isMobile) openCart();
   };
 
   const adjustCartQty = (lineId: string, delta: number) => {
@@ -370,7 +421,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     setSaleDiscountFixed("");
     setSaleNote("");
     setLoadedDraftId(null);
-    setTimeout(() => { setSaleComplete(false); setShowCart(false); }, 2000);
+    setTimeout(() => { setSaleComplete(false); closeCart(); }, 2000);
   };
 
   // ─── Save as draft ───────────────────────────────────────────────────────
@@ -450,8 +501,8 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
     setSaleDiscountFixed(sale.discountFixed ?? "");
     setSaleNote(sale.note ?? "");
     setLoadedDraftId(sale.id);
-    setActiveTab(0); // switch to sell tab
-    if (isMobile) setShowCart(true);
+    changeTab(0); // switch to sell tab
+    if (isMobile) openCart();
   };
 
   // ─── Edit/delete pending sale ────────────────────────────────────────────
@@ -596,7 +647,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
         </Toolbar>
         <Tabs
           value={activeTab}
-          onChange={(_, v) => setActiveTab(v)}
+          onChange={(_, v) => changeTab(v)}
           textColor="inherit"
           indicatorColor="secondary"
           variant="fullWidth"
@@ -680,7 +731,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
             <Box sx={{ p: 1.5, borderBottom: 1, borderColor: "divider" }}>
               <Stack direction="row" alignItems="center">
                 {isMobile && (
-                  <Button size="small" onClick={() => setShowCart(false)} sx={{ mr: 1, minWidth: 0 }}>
+                  <Button size="small" onClick={closeCart} sx={{ mr: 1, minWidth: 0 }}>
                     ← Products
                   </Button>
                 )}
@@ -795,7 +846,7 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
           {isMobile && !showCart && (
             <Box sx={{ position: "fixed", bottom: 16, right: 16, zIndex: 10 }}>
               <IconButton
-                onClick={() => setShowCart(true)}
+                onClick={openCart}
                 sx={{ bgcolor: "primary.main", color: "white", width: 56, height: 56, "&:hover": { bgcolor: "primary.dark" } }}
               >
                 <Badge badgeContent={cartItems} color="error">
