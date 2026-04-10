@@ -49,6 +49,8 @@ function CartLineRow({ line, setCart, adjustCartQty }: {
 }) {
   const [editingQty, setEditingQty] = useState(false);
   const [qtyInput, setQtyInput] = useState("");
+  const [editingPrice, setEditingPrice] = useState(false);
+  const [priceInput, setPriceInput] = useState("");
   const [discountOpen, setDiscountOpen] = useState(parseFloat(line.discountAmount || "0") > 0);
 
   const lineDiscount = parseFloat(line.discountAmount || "0");
@@ -64,14 +66,46 @@ function CartLineRow({ line, setCart, adjustCartQty }: {
     setEditingQty(false);
   };
 
+  const commitPrice = () => {
+    const val = parseFloat(priceInput);
+    if (!isNaN(val) && val >= 0) {
+      setCart((p) => p.map((l) => l.id === line.id ? { ...l, unitPrice: val.toFixed(2) } : l));
+    }
+    setEditingPrice(false);
+  };
+
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={0.75}>
+        {line.photo && (
+          <Box component="img" src={line.photo}
+            sx={{ width: 32, height: 32, borderRadius: "3px", objectFit: "cover", flexShrink: 0 }} />
+        )}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="body2" noWrap fontWeight="medium">{line.label}</Typography>
-          <Typography variant="caption" color="text.secondary">
-            €{line.unitPrice}{lineDiscount > 0 ? ` -€${line.discountAmount}` : ""} × {line.quantity} = €{lineTotal.toFixed(2)}
-          </Typography>
+          <Stack direction="row" alignItems="center" spacing={0.5}>
+            {editingPrice ? (
+              <TextField
+                size="small" type="number" autoFocus
+                value={priceInput}
+                onChange={(e) => setPriceInput(e.target.value)}
+                onBlur={commitPrice}
+                onKeyDown={(e) => { if (e.key === "Enter") commitPrice(); }}
+                sx={{ width: 64, "& .MuiInputBase-root": { height: 20, fontSize: "0.75rem" }, "& input": { p: 0.25, textAlign: "center" } }}
+                slotProps={{ htmlInput: { step: "0.01", min: 0 } }}
+              />
+            ) : (
+              <Typography
+                variant="caption" color="text.primary" sx={{ opacity: 0.7, cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+                onClick={() => { setPriceInput(line.unitPrice); setEditingPrice(true); }}
+              >
+                €{line.unitPrice}
+              </Typography>
+            )}
+            <Typography variant="caption" color="text.primary" sx={{ opacity: 0.7 }}>
+              {lineDiscount > 0 ? `-€${line.discountAmount} ` : ""}× {line.quantity} = €{lineTotal.toFixed(2)}
+            </Typography>
+          </Stack>
         </Box>
         <IconButton size="small" onClick={() => adjustCartQty(line.id, -1)}>
           <RemoveCircleOutlineIcon sx={{ fontSize: 18, color: "error.light" }} />
@@ -358,7 +392,6 @@ export default function PosScreen({ config, onReset }: { config: PosConfig; onRe
         discountNote: "",
       }];
     });
-    if (isMobile) openCart();
   };
 
   const adjustCartQty = (lineId: string, delta: number) => {
