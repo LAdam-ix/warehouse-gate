@@ -382,7 +382,7 @@ function VariantRow({
                   <UnarchiveIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              {!isOnlyVariant && (
+              {!isOnlyVariant && !variant.isDefault && (
                 <Tooltip title={t("variants.deleteVariantTooltip")}>
                   <IconButton size="small" color="error" onClick={async () => {
                     if (!await confirm(t("variants.deleteVariantConfirm", { label }), { title: t("variants.deleteVariantTitle"), confirmLabel: t("common.delete") })) return;

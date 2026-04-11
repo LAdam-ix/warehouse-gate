@@ -218,6 +218,13 @@ class ProductVariantViewSet(FirmScopedMixin, viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         variant = self.get_object()
+
+        if variant.is_default:
+            return Response(
+                {"detail": "Cannot delete the default variant. Archive it instead."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         mode = self.get_firm().warehouse_mode
 
         if mode == "strict":
