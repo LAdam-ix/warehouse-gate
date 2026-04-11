@@ -390,6 +390,8 @@ export interface ProductionRequest {
   id: string;
   variant: string;
   variantName: string;
+  variantPhotoUrl: string | null;
+  variantColorHex: string | null;
   productId: string;
   productName: string;
   quantityRequested: number;

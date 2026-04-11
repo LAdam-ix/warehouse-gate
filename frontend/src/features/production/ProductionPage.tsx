@@ -121,6 +121,16 @@ function RequestRow({ req }: { req: ProductionRequest }) {
   return (
     <>
       <Stack direction="row" alignItems="flex-start" spacing={1.5} sx={{ py: 1.5, px: 2 }}>
+        {/* Photo / color swatch */}
+        <Box sx={{ width: 36, flexShrink: 0, pt: 0.25 }}>
+          {req.variantPhotoUrl ? (
+            <Box component="img" src={req.variantPhotoUrl}
+              sx={{ width: 32, height: 32, borderRadius: "3px", objectFit: "cover", display: "block" }} />
+          ) : req.variantColorHex ? (
+            <Box sx={{ width: 18, height: 18, borderRadius: "50%", bgcolor: req.variantColorHex, border: "1px solid", borderColor: "divider" }} />
+          ) : null}
+        </Box>
+
         <Stack spacing={0.5} sx={{ minWidth: 90 }}>
           <Chip
             label={t(`production.status.${req.status}`)}
