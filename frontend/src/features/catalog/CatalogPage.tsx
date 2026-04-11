@@ -602,7 +602,9 @@ export default function CatalogPage() {
   const [includedTags, setIncludedTags] = useState<string[]>([]);
   const [excludedTags, setExcludedTags] = useState<string[]>([]);
   const [catMode, setCatMode] = useState<"or" | "and">("or");
-  const [showArchived, setShowArchived] = useState(false);
+  // "active" = active only, "all" = both, "archived" = archived only
+  const [archiveMode, setArchiveMode] = useState<"active" | "all" | "archived">("active");
+  const [locationFilter, setLocationFilter] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
 
@@ -610,10 +612,13 @@ export default function CatalogPage() {
   const showSku = warehouseSettings?.showSku ?? false;
 
   const { data: categories } = useCategories();
+  const { data: allLocations } = useLocations();
+  const catalogLocations = (allLocations ?? []).filter((l: { isActive: boolean }) => l.isActive);
   const { data, isLoading } = useProducts({
     search: search || undefined,
     item_type: typeFilter ?? undefined,
-    is_active: showArchived ? undefined : true,
+    is_active: archiveMode === "active" ? true : archiveMode === "archived" ? false : undefined,
+    stock_at_location: locationFilter ?? undefined,
   });
 
   // Cycle: unselected → included → excluded → unselected
@@ -683,6 +688,21 @@ export default function CatalogPage() {
             />
           ))}
 
+          {/* Location chips */}
+          {catalogLocations.length > 1 && catalogLocations.map((l: { id: string; name: string }) => (
+            <Chip
+              key={l.id}
+              label={l.name}
+              size="small"
+              onClick={() => setLocationFilter((prev) => prev === l.id ? null : l.id)}
+              color={locationFilter === l.id ? "info" : "default"}
+              variant={locationFilter === l.id ? "filled" : "outlined"}
+              sx={{ cursor: "pointer" }}
+            />
+          ))}
+
+          {catalogLocations.length > 1 && <Divider orientation="vertical" flexItem sx={{ mx: 0.25 }} />}
+
           {/* Category tag chips — 3 states */}
           {categories?.map((c) => {
             const isIncluded = includedTags.includes(c.id);
@@ -721,7 +741,7 @@ export default function CatalogPage() {
 
           {/* Archived toggle — visually separate from filter tags */}
           <Box
-            onClick={() => setShowArchived((v) => !v)}
+            onClick={() => setArchiveMode((m) => m === "active" ? "all" : m === "all" ? "archived" : "active")}
             sx={{
               ml: "auto",
               cursor: "pointer",
@@ -732,16 +752,16 @@ export default function CatalogPage() {
               py: 0.25,
               borderRadius: 1,
               border: "1px solid",
-              borderColor: showArchived ? "warning.main" : "divider",
-              bgcolor: showArchived ? "warning.50" : "transparent",
-              color: showArchived ? "warning.dark" : "text.secondary",
+              borderColor: archiveMode !== "active" ? "warning.main" : "divider",
+              bgcolor: archiveMode !== "active" ? "warning.50" : "transparent",
+              color: archiveMode !== "active" ? "warning.dark" : "text.secondary",
               fontSize: "0.7rem",
               userSelect: "none",
-              "&:hover": { bgcolor: showArchived ? "warning.100" : "action.hover" },
+              "&:hover": { bgcolor: archiveMode !== "active" ? "warning.100" : "action.hover" },
             }}
           >
             <ArchiveIcon sx={{ fontSize: 12 }} />
-            {showArchived ? t("catalog.showingArchived") : t("catalog.activeOnly")}
+            {archiveMode === "active" ? t("catalog.activeOnly") : archiveMode === "all" ? t("catalog.showingAll") : t("catalog.archivedOnly")}
           </Box>
         </Stack>
       </Stack>

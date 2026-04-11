@@ -102,6 +102,8 @@
     "newProduct": "New Product",
     "searchProducts": "Search products…",
     "showingArchived": "Showing archived",
+    "showingAll": "Active + archived",
+    "archivedOnly": "Archived only",
     "activeOnly": "Active only",
     "noProductsYet": "No products yet. Create one to get started.",
     "noProductsMatch": "No products match the current filters.",
