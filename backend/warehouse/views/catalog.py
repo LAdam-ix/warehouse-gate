@@ -29,7 +29,9 @@ class ProductFilter(django_filters.FilterSet):
         conjoined=False,  # OR logic — show product if it has ANY of the selected categories
     )
     has_stock = django_filters.BooleanFilter(method="filter_has_stock")
-    stock_at_location = django_filters.UUIDFilter(method="filter_stock_at_location")
+    stock_at_location = django_filters.BaseInFilter(
+        field_name="stock_at_location", method="filter_stock_at_location",
+    )
 
     def filter_has_stock(self, queryset, name, value):
         from django.db.models import Sum
@@ -39,11 +41,12 @@ class ProductFilter(django_filters.FilterSet):
         return qs.filter(_total_stock__gt=0) if value else qs.filter(_total_stock=0)
 
     def filter_stock_at_location(self, queryset, name, value):
+        """Filter products with stock at any of the given location IDs (OR logic)."""
         from django.db.models import Sum, Q
         return queryset.annotate(
             _loc_stock=Sum(
                 "variants__stock_entries__quantity",
-                filter=Q(variants__stock_entries__location_id=value),
+                filter=Q(variants__stock_entries__location_id__in=value),
                 default=0,
             )
         ).filter(_loc_stock__gt=0)

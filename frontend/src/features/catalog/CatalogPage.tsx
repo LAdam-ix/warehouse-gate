@@ -14,6 +14,8 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -442,25 +444,33 @@ function ProductRow({ product }: { product: Product }) {
 
 // ─── Column header row ────────────────────────────────────────────────────────
 
-function CatalogHeader() {
+function SortArrow({ field, activeField, activeDir }: { field: string; activeField: string; activeDir: string }) {
+  if (field !== activeField) return null;
+  return activeDir === "asc"
+    ? <ArrowUpwardIcon sx={{ fontSize: 12, ml: 0.25 }} />
+    : <ArrowDownwardIcon sx={{ fontSize: 12, ml: 0.25 }} />;
+}
+
+function CatalogHeader({ sortField, sortDir, onSort }: { sortField: string; sortDir: string; onSort: (field: string) => void }) {
   const { t } = useTranslation();
+  const headerSx = { cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center", "&:hover": { color: "text.primary" } } as const;
   return (
     <Stack
       direction="row"
       alignItems="center"
       sx={{ px: 1.5, pb: 0.5, borderBottom: "1px solid", borderColor: "divider" }}
     >
-      <Box sx={{ width: 64, flexShrink: 0 }} />{/* photo (52) + gap (12) */}
-      <Typography variant="caption" color="text.secondary" sx={{ flex: 1, minWidth: 0 }}>
-        {t("catalog.product")}
+      <Box sx={{ width: 64, flexShrink: 0 }} />
+      <Typography variant="caption" color="text.secondary" sx={{ flex: 1, minWidth: 0, ...headerSx }} onClick={() => onSort("name")}>
+        {t("catalog.product")}<SortArrow field="name" activeField={sortField} activeDir={sortDir} />
       </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ width: 52, textAlign: "center", flexShrink: 0 }}>
-        {t("catalog.stock")}
+      <Typography variant="caption" color="text.secondary" sx={{ width: 52, textAlign: "center", flexShrink: 0, justifyContent: "center", ...headerSx }} onClick={() => onSort("stock")}>
+        {t("catalog.stock")}<SortArrow field="stock" activeField={sortField} activeDir={sortDir} />
       </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ width: 80, textAlign: "right", pr: 1.5, flexShrink: 0 }}>
-        {t("catalog.price")}
+      <Typography variant="caption" color="text.secondary" sx={{ width: 80, textAlign: "right", pr: 1.5, flexShrink: 0, justifyContent: "flex-end", ...headerSx }} onClick={() => onSort("price")}>
+        {t("catalog.price")}<SortArrow field="price" activeField={sortField} activeDir={sortDir} />
       </Typography>
-      <Box sx={{ width: 77, flexShrink: 0 }} />{/* divider (1px) + actions (76) */}
+      <Box sx={{ width: 77, flexShrink: 0 }} />
     </Stack>
   );
 }
@@ -600,11 +610,23 @@ export default function CatalogPage() {
   // Read filters from URL, write back on change
   const search = sp.get("q") ?? "";
   const setSearch = (v: string) => setSp((p) => { v ? p.set("q", v) : p.delete("q"); return p; }, { replace: true });
-  const typeFilter = sp.get("type") ?? null;
-  const setTypeFilter = (v: string | null | ((prev: string | null) => string | null)) => setSp((p) => {
-    const next = typeof v === "function" ? v(p.get("type") ?? null) : v;
-    next ? p.set("type", next) : p.delete("type"); return p;
+
+  // Type filter — accumulative (multiple types selected = OR)
+  const typeFilters = sp.get("type")?.split(",").filter(Boolean) ?? [];
+  const toggleType = (type: string) => setSp((p) => {
+    const cur = p.get("type")?.split(",").filter(Boolean) ?? [];
+    const next = cur.includes(type) ? cur.filter((t) => t !== type) : [...cur, type];
+    next.length ? p.set("type", next.join(",")) : p.delete("type"); return p;
   }, { replace: true });
+
+  // Location filter — accumulative (multiple locations = OR via backend)
+  const locationFilters = sp.get("loc")?.split(",").filter(Boolean) ?? [];
+  const toggleLocation = (locId: string) => setSp((p) => {
+    const cur = p.get("loc")?.split(",").filter(Boolean) ?? [];
+    const next = cur.includes(locId) ? cur.filter((l) => l !== locId) : [...cur, locId];
+    next.length ? p.set("loc", next.join(",")) : p.delete("loc"); return p;
+  }, { replace: true });
+
   const includedTags = sp.get("inc")?.split(",").filter(Boolean) ?? [];
   const excludedTags = sp.get("exc")?.split(",").filter(Boolean) ?? [];
   const setIncludedTags = (fn: (prev: string[]) => string[]) => setSp((p) => {
@@ -625,10 +647,16 @@ export default function CatalogPage() {
     const next = fn((p.get("archive") ?? "active") as "active" | "all" | "archived");
     next === "active" ? p.delete("archive") : p.set("archive", next); return p;
   }, { replace: true });
-  const locationFilter = sp.get("loc") ?? null;
-  const setLocationFilter = (fn: (prev: string | null) => string | null) => setSp((p) => {
-    const next = fn(p.get("loc") ?? null);
-    next ? p.set("loc", next) : p.delete("loc"); return p;
+
+  // Sort — field:direction, click same field toggles direction
+  const sortParam = sp.get("sort") ?? "";
+  const [sortField, sortDir] = sortParam.includes(":") ? sortParam.split(":") as [string, string] : ["", ""];
+  const toggleSort = (field: string) => setSp((p) => {
+    const cur = p.get("sort") ?? "";
+    if (cur === `${field}:asc`) { p.set("sort", `${field}:desc`); }
+    else if (cur === `${field}:desc`) { p.delete("sort"); }
+    else { p.set("sort", `${field}:asc`); }
+    return p;
   }, { replace: true });
   const [createOpen, setCreateOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
@@ -641,9 +669,9 @@ export default function CatalogPage() {
   const catalogLocations = (allLocations ?? []).filter((l: { isActive: boolean }) => l.isActive);
   const { data, isLoading } = useProducts({
     search: search || undefined,
-    item_type: typeFilter ?? undefined,
+    item_type: typeFilters.length === 1 ? typeFilters[0] : undefined,
     is_active: archiveMode === "active" ? true : archiveMode === "archived" ? false : undefined,
-    stock_at_location: locationFilter ?? undefined,
+    stock_at_location: locationFilters.length ? locationFilters.join(",") : undefined,
   });
 
   // Cycle: unselected → included → excluded → unselected
@@ -660,7 +688,9 @@ export default function CatalogPage() {
 
   const clearTags = () => { setIncludedTags(() => []); setExcludedTags(() => []); };
 
-  const products = data?.results?.filter((p) => {
+  const filtered = (data?.results ?? []).filter((p) => {
+    // Type filter (accumulative, client-side when both selected = show all)
+    if (typeFilters.length > 0 && !typeFilters.includes(p.itemType)) return false;
     // Included tags (AND/OR)
     if (includedTags.length > 0) {
       if (catMode === "or" && !includedTags.some((id) => p.categories.includes(id))) return false;
@@ -669,7 +699,16 @@ export default function CatalogPage() {
     // Excluded tags
     if (excludedTags.some((id) => p.categories.includes(id))) return false;
     return true;
-  }) ?? [];
+  });
+
+  // Sort
+  const products = sortField ? [...filtered].sort((a, b) => {
+    let cmp = 0;
+    if (sortField === "name") cmp = a.name.localeCompare(b.name);
+    else if (sortField === "price") cmp = parseFloat(a.basePrice) - parseFloat(b.basePrice);
+    else if (sortField === "stock") cmp = a.totalStock - b.totalStock;
+    return sortDir === "desc" ? -cmp : cmp;
+  }) : filtered;
 
   return (
     <CatalogPrefsContext.Provider value={{ showSku }}>
@@ -700,28 +739,28 @@ export default function CatalogPage() {
 
         {/* Tag row: type chips + category chips + archived toggle */}
         <Stack direction="row" flexWrap="wrap" gap={0.5} alignItems="center">
-          {/* Type chips */}
+          {/* Type chips — accumulative */}
           {["physical", "service"].map((type) => (
             <Chip
               key={type}
               label={type === "physical" ? t("catalog.physical") : t("catalog.service")}
               size="small"
-              onClick={() => setTypeFilter((prev) => (prev === type ? null : type))}
-              color={typeFilter === type ? "primary" : "default"}
-              variant={typeFilter === type ? "filled" : "outlined"}
+              onClick={() => toggleType(type)}
+              color={typeFilters.includes(type) ? "primary" : "default"}
+              variant={typeFilters.includes(type) ? "filled" : "outlined"}
               sx={{ cursor: "pointer", textTransform: "capitalize" }}
             />
           ))}
 
-          {/* Location chips */}
+          {/* Location chips — accumulative */}
           {catalogLocations.length > 1 && catalogLocations.map((l: { id: string; name: string }) => (
             <Chip
               key={l.id}
               label={l.name}
               size="small"
-              onClick={() => setLocationFilter((prev) => prev === l.id ? null : l.id)}
-              color={locationFilter === l.id ? "info" : "default"}
-              variant={locationFilter === l.id ? "filled" : "outlined"}
+              onClick={() => toggleLocation(l.id)}
+              color={locationFilters.includes(l.id) ? "info" : "default"}
+              variant={locationFilters.includes(l.id) ? "filled" : "outlined"}
               sx={{ cursor: "pointer" }}
             />
           ))}
@@ -806,7 +845,7 @@ export default function CatalogPage() {
 
       {products.length > 0 && (
         <Stack>
-          <CatalogHeader />
+          <CatalogHeader sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
           <Box sx={{ mt: 0.5 }}>
             {products.map((product) => <ProductRow key={product.id} product={product} />)}
           </Box>
