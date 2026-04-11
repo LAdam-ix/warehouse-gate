@@ -392,10 +392,15 @@ export const useStockEntries = (params?: Record<string, unknown>, options: { ena
     staleTime: 30_000,
   });
 
+export interface StockMovementGroup {
+  batchId: string | null;
+  movements: StockMovement[];
+}
+
 export const useStockMovements = (params?: Record<string, unknown>) =>
   useQuery({
     queryKey: ["stock-movements", params],
-    queryFn: () => get<PaginatedResponse<StockMovement>>("/stock-movements/", params),
+    queryFn: () => get<PaginatedResponse<StockMovementGroup>>("/stock-movements/", params),
     staleTime: 30_000,
   });
 

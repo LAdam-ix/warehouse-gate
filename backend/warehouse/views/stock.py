@@ -2,6 +2,7 @@ import uuid
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 
 from warehouse.models import Location, StockEntry, StockMovement, ProductVariant
@@ -71,10 +72,19 @@ class StockEntryViewSet(FirmScopedMixin, viewsets.ReadOnlyModelViewSet):
 
 
 class StockMovementViewSet(FirmScopedMixin, viewsets.ReadOnlyModelViewSet):
-    """Immutable log — read-only."""
+    """
+    Immutable stock log — read-only.
+
+    Returns movements grouped by batch_id. Each entry in the paginated list is
+    either a single movement (no batch) or a group of movements sharing a batch_id.
+    Pagination counts groups, not individual rows — a batch of 20 items = 1 entry.
+
+    Response format:
+        { count, next, previous, results: [ { batchId, movements: [...] }, ... ] }
+    """
     serializer_class = StockMovementSerializer
 
-    def get_queryset(self):
+    def _base_queryset(self):
         qs = StockMovement.objects.select_related(
             "variant__product", "location", "created_by"
         ).filter(variant__product__firm=self.get_firm())
@@ -88,6 +98,99 @@ class StockMovementViewSet(FirmScopedMixin, viewsets.ReadOnlyModelViewSet):
         if movement_type:
             qs = qs.filter(movement_type=movement_type)
         return qs
+
+    def get_queryset(self):
+        return self._base_queryset()
+
+    def list(self, request, *args, **kwargs):
+        """Custom list: paginate by logical groups (batch or single), not raw rows."""
+        from django.db.models import Max, Count
+        from collections import OrderedDict
+
+        qs = self._base_queryset()
+
+        # Get distinct group keys with their latest timestamp for ordering.
+        # Each group is either a batch_id or a single movement id (for non-batch).
+        # We query the distinct batch_ids + individual movement ids, ordered by newest first.
+        batch_groups = (
+            qs.filter(batch_id__isnull=False)
+            .values("batch_id")
+            .annotate(latest=Max("created_at"), count=Count("id"))
+            .order_by("-latest")
+        )
+        single_movements = (
+            qs.filter(batch_id__isnull=True)
+            .values("id", "created_at")
+            .order_by("-created_at")
+        )
+
+        # Build unified ordered list of group keys: (timestamp, type, key)
+        group_keys = []
+        for bg in batch_groups:
+            group_keys.append((bg["latest"], "batch", bg["batch_id"]))
+        for sm in single_movements:
+            group_keys.append((sm["created_at"], "single", sm["id"]))
+        group_keys.sort(key=lambda x: x[0], reverse=True)
+
+        # Paginate the group keys
+        page_size = int(request.query_params.get("page_size", 50))
+        page_size = min(max(page_size, 1), 500)
+        page_num = int(request.query_params.get("page", 1))
+        total_groups = len(group_keys)
+        start = (page_num - 1) * page_size
+        end = start + page_size
+        page_keys = group_keys[start:end]
+
+        # Fetch all movements for this page's groups in one query
+        batch_ids = [k[2] for k in page_keys if k[1] == "batch"]
+        single_ids = [k[2] for k in page_keys if k[1] == "single"]
+
+        from django.db.models import Q
+        if batch_ids and single_ids:
+            page_movements = qs.filter(Q(batch_id__in=batch_ids) | Q(id__in=single_ids))
+        elif batch_ids:
+            page_movements = qs.filter(batch_id__in=batch_ids)
+        elif single_ids:
+            page_movements = qs.filter(id__in=single_ids)
+        else:
+            page_movements = qs.none()
+
+        serializer = self.get_serializer(page_movements, many=True)
+        movement_data = serializer.data
+
+        # Group serialized data by batch_id, preserving page order
+        batch_map = OrderedDict()
+        singles = {}
+        for m in movement_data:
+            bid = m.get("batch_id") or m.get("batchId")
+            mid = m.get("id")
+            if bid:
+                batch_map.setdefault(bid, []).append(m)
+            else:
+                singles[mid] = m
+
+        # Build result in the same order as page_keys
+        results = []
+        for _, gtype, key in page_keys:
+            if gtype == "batch" and str(key) in batch_map:
+                results.append({"batchId": str(key), "movements": batch_map[str(key)]})
+            elif gtype == "single" and str(key) in singles:
+                results.append({"batchId": None, "movements": [singles[str(key)]]})
+
+        # Build pagination URLs
+        base_url = request.build_absolute_uri(request.path)
+        params = request.query_params.copy()
+
+        def page_url(p):
+            params["page"] = str(p)
+            return f"{base_url}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
+
+        return Response({
+            "count": total_groups,
+            "next": page_url(page_num + 1) if end < total_groups else None,
+            "previous": page_url(page_num - 1) if page_num > 1 else None,
+            "results": results,
+        })
 
     @action(detail=True, methods=["post"])
     def revert(self, request, pk=None):

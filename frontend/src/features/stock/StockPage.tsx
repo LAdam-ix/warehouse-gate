@@ -19,32 +19,10 @@ import { useTranslation } from "react-i18next";
 import { navLinkProps } from "../../utils/navLink";
 
 
-// ─── Movement log grouping ────────────────────────────────────────────────────
-
+// Backend returns pre-grouped movements: each result is { batchId, movements[] }
 interface MovementGroup {
   batchId: string | null;
   movements: StockMovement[];
-}
-
-function groupMovements(movements: StockMovement[]): MovementGroup[] {
-  const groups: MovementGroup[] = [];
-  const batchMap = new Map<string, MovementGroup>();
-
-  for (const m of movements) {
-    if (m.batchId) {
-      const existing = batchMap.get(m.batchId);
-      if (existing) {
-        existing.movements.push(m);
-      } else {
-        const g: MovementGroup = { batchId: m.batchId, movements: [m] };
-        batchMap.set(m.batchId, g);
-        groups.push(g);
-      }
-    } else {
-      groups.push({ batchId: null, movements: [m] });
-    }
-  }
-  return groups;
 }
 
 function MovementGroupRow({ group, showLocations }: { group: MovementGroup; showLocations: boolean }) {
@@ -236,7 +214,7 @@ export default function StockPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {movements?.results && groupMovements(movements.results).map((group, i) => (
+            {movements?.results?.map((group: MovementGroup, i: number) => (
               <MovementGroupRow key={group.batchId ?? `single-${i}`} group={group} showLocations={showLocations} />
             ))}
             {!isLoading && movements?.results?.length === 0 && (
@@ -258,7 +236,7 @@ export default function StockPage() {
               {t("common.previous")}
             </Button>
             <Typography variant="caption" color="text.secondary">
-              {t("stock.pageInfo", { from: (page - 1) * 50 + 1, to: Math.min(page * 50, movements.count), total: movements.count })}
+              {t("stock.pageInfo", { count: movements.results.length, total: movements.count })}
             </Typography>
             <Button size="small" disabled={!movements.next} onClick={() => setPage((p) => p + 1)}>
               {t("common.next")}
