@@ -118,9 +118,8 @@ function VariantRows({
   return (
     <Stack divider={<Divider />}>
       {visible.map((v) => {
-        const label = v.isDefault
-          ? productName
-          : `${productName} — ${variantLabel(v.attributeValues)}`;
+        const vLabel = variantLabel(v.attributeValues);
+        const label = vLabel ? `${productName} — ${vLabel}` : productName;
         const photoUrl = v.galleryPhotoUrl ?? v.photo ?? null;
         const colorHex = v.attributeValues.find((av) => av.colorHex)?.colorHex ?? null;
         return (
@@ -140,7 +139,7 @@ function VariantRows({
               <Box sx={{ width: 14, height: 14, borderRadius: "50%", flexShrink: 0, bgcolor: colorHex }} />
             )}
             <Typography variant="body2" sx={{ flex: 1 }} noWrap>
-              {v.isDefault ? t("variants.default") : variantLabel(v.attributeValues)}
+              {vLabel || productName}
             </Typography>
             {showStock && (
               <StockChips variant={v} locations={locations} />
@@ -309,6 +308,8 @@ interface ProductPickerPanelProps {
   variantLimit?: number;
   /** Sort variants inside expanded rows */
   variantSort?: "stockAsc";
+  /** Sort products — "stockRatio" sorts by avg(stock/threshold), lowest first */
+  productSort?: "stockRatio";
   /** Additional client-side filter applied after category filtering */
   filterFn?: (product: Product) => boolean;
   autoFocus?: boolean;
@@ -329,6 +330,7 @@ export default function ProductPickerPanel({
   autoExpandThreshold,
   variantLimit,
   variantSort,
+  productSort,
   filterFn,
   autoFocus = false,
   emptyMessage,
@@ -350,7 +352,7 @@ export default function ProductPickerPanel({
   const locations = (allLocations ?? []).filter((l) => l.isActive).map((l) => ({ id: l.id, name: l.name }));
 
   const allProducts = productsData?.results ?? [];
-  const products = allProducts.filter((p) => {
+  const filtered = allProducts.filter((p) => {
     if (selectedCategories.length > 0) {
       const catMatch = catMode === "or"
         ? selectedCategories.some((id) => p.categories.includes(id))
@@ -360,6 +362,20 @@ export default function ProductPickerPanel({
     if (filterFn && !filterFn(p)) return false;
     return true;
   });
+
+  // Sort products — "stockRatio" uses avg(stock / max(threshold,1)) per variant, lowest first.
+  // Secondary sort: product name (same as catalog default).
+  const products = productSort === "stockRatio"
+    ? [...filtered].sort((a, b) => {
+        const ratio = (p: typeof a) => {
+          if (p.variantCount === 0) return Infinity;
+          const threshold = p.lowStockThreshold ?? 1;
+          return p.totalStock / Math.max(p.variantCount * Math.max(threshold, 1), 1);
+        };
+        const diff = ratio(a) - ratio(b);
+        return diff !== 0 ? diff : a.name.localeCompare(b.name);
+      })
+    : filtered;
 
   return (
     <Stack spacing={1}>

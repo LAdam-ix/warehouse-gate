@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box, Button, Chip, CircularProgress, Divider,
   Grid, IconButton, Paper, Stack, TextField, Tooltip, Typography,
@@ -240,6 +240,7 @@ export default function ProductionPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [note, setNote] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending,in_progress");
+  const [addOpen, setAddOpen] = useState(false);
 
   const create = useCreateProductionRequest();
 
@@ -252,6 +253,14 @@ export default function ProductionPage() {
     statusFilter === "pending,in_progress"
       ? queueRequests.filter((r) => r.status === "pending" || r.status === "in_progress")
       : queueRequests;
+
+  // Auto-open add panel when queue has no active requests (only on default filter)
+  const hasActiveRequests = queueRequests.some((r) => r.status === "pending" || r.status === "in_progress");
+  useEffect(() => {
+    if (!queueLoading && !hasActiveRequests && statusFilter === "pending,in_progress") {
+      setAddOpen(true);
+    }
+  }, [queueLoading, hasActiveRequests, statusFilter]);
 
   const handlePickerAdd: ProductPickerSelectFn = (variant, label, _product, qty = 1) => {
     handleAdd({ variantId: variant.id, variantLabel: label, quantity: qty });
@@ -310,107 +319,116 @@ export default function ProductionPage() {
 
   return (
     <Stack spacing={3}>
-      <Typography variant="h5" fontWeight="bold">{t("production.title")}</Typography>
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <Typography variant="h5" fontWeight="bold" sx={{ flex: 1 }}>{t("production.title")}</Typography>
+        <Button
+          variant={addOpen ? "contained" : "outlined"}
+          size="small"
+          startIcon={<AddIcon />}
+          onClick={() => setAddOpen((v) => !v)}
+        >
+          {t("production.addToQueue")}
+        </Button>
+      </Stack>
 
-      {/* Browse + cart */}
-      <Grid container spacing={2}>
-        {/* Left — product picker */}
-        <Grid size={{ xs: 12, md: 7 }}>
-          <ProductPickerPanel
-            onSelect={handlePickerAdd}
-            queryParams={{ item_type: "physical" }}
-            showStock
-            quickAmounts={[1, 5, 10, 50]}
-            autoExpandThreshold={3}
-            variantSort="stockAsc"
-            filterFn={lowStockOnly
-              ? (p) => p.lowStockThreshold !== null && p.totalStock <= p.lowStockThreshold
-              : undefined}
-            autoFocus
-            noMatchMessage={t("common.noProductsFound")}
-          />
-          <Chip
-            label={t("production.lowStock")}
-            size="small"
-            color={lowStockOnly ? "warning" : "default"}
-            variant={lowStockOnly ? "filled" : "outlined"}
-            onClick={() => setLowStockOnly((v) => !v)}
-            sx={{ cursor: "pointer", mt: 1 }}
-          />
-        </Grid>
+      {/* Collapsible add panel */}
+      {addOpen && (
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, md: 7 }}>
+            <ProductPickerPanel
+              onSelect={handlePickerAdd}
+              queryParams={{ item_type: "physical" }}
+              showStock
+              quickAmounts={[1, 5, 10, 50]}
+              autoExpandThreshold={3}
+              variantSort="stockAsc"
+              productSort="stockRatio"
+              filterFn={lowStockOnly
+                ? (p) => p.lowStockThreshold !== null && p.totalStock <= p.lowStockThreshold
+                : undefined}
+              autoFocus
+              noMatchMessage={t("common.noProductsFound")}
+            />
+            <Chip
+              label={t("production.lowStock")}
+              size="small"
+              color={lowStockOnly ? "warning" : "default"}
+              variant={lowStockOnly ? "filled" : "outlined"}
+              onClick={() => setLowStockOnly((v) => !v)}
+              sx={{ cursor: "pointer", mt: 1 }}
+            />
+          </Grid>
 
-        {/* Right — request cart */}
-        <Grid size={{ xs: 12, md: 5 }}>
-          <Paper variant="outlined" sx={{ p: 2, position: "sticky", top: 16 }}>
-            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-              {t("production.requestsToCreate")}
-              {totalRequested > 0 && (
-                <Chip label={t("production.units", { count: totalRequested })} size="small" color="primary" sx={{ ml: 1 }} />
-              )}
-            </Typography>
-
-            {cart.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                {t("production.clickToAddRequest")}
+          <Grid size={{ xs: 12, md: 5 }}>
+            <Paper variant="outlined" sx={{ p: 2, position: "sticky", top: 16 }}>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                {t("production.requestsToCreate")}
+                {totalRequested > 0 && (
+                  <Chip label={t("production.units", { count: totalRequested })} size="small" color="primary" sx={{ ml: 1 }} />
+                )}
               </Typography>
-            ) : (
-              <Stack spacing={0.75} sx={{ mb: 2 }}>
-                {cart.map((line) => (
-                  <Stack key={line.variantId} direction="row" alignItems="center" spacing={0.5}>
-                    <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
-                      {line.variantLabel}
-                    </Typography>
-                    <IconButton size="small" onClick={() => adjustQty(line.variantId, -1)}>
-                      <RemoveCircleOutlineIcon sx={{ fontSize: 18, color: "error.light" }} />
-                    </IconButton>
-                    <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 24, textAlign: "center" }}>
-                      {line.quantity}
-                    </Typography>
-                    <IconButton size="small" onClick={() => adjustQty(line.variantId, 1)}>
-                      <AddCircleOutlineIcon sx={{ fontSize: 18, color: "success.main" }} />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => setCart((p) => p.filter((l) => l.variantId !== line.variantId))}
-                    >
-                      <DeleteIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </Stack>
-                ))}
+
+              {cart.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  {t("production.clickToAddRequest")}
+                </Typography>
+              ) : (
+                <Stack spacing={0.75} sx={{ mb: 2 }}>
+                  {cart.map((line) => (
+                    <Stack key={line.variantId} direction="row" alignItems="center" spacing={0.5}>
+                      <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
+                        {line.variantLabel}
+                      </Typography>
+                      <IconButton size="small" onClick={() => adjustQty(line.variantId, -1)}>
+                        <RemoveCircleOutlineIcon sx={{ fontSize: 18, color: "error.light" }} />
+                      </IconButton>
+                      <Typography variant="body2" fontWeight="bold" sx={{ minWidth: 24, textAlign: "center" }}>
+                        {line.quantity}
+                      </Typography>
+                      <IconButton size="small" onClick={() => adjustQty(line.variantId, 1)}>
+                        <AddCircleOutlineIcon sx={{ fontSize: 18, color: "success.main" }} />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => setCart((p) => p.filter((l) => l.variantId !== line.variantId))}
+                      >
+                        <DeleteIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Stack>
+                  ))}
+                </Stack>
+              )}
+
+              <Divider sx={{ my: 1.5 }} />
+
+              <Stack spacing={1.5}>
+                <TextField
+                  label={t("common.noteOptional")}
+                  size="small"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  fullWidth
+                  placeholder={t("production.noteAppliedToAll")}
+                />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={handleSubmit}
+                  disabled={cart.length === 0 || create.isPending}
+                  fullWidth
+                >
+                  {cart.length > 0
+                    ? t(cart.length !== 1 ? "production.createRequests_other" : "production.createRequests_one", { count: cart.length })
+                    : t("production.createRequestsDefault")}
+                </Button>
               </Stack>
-            )}
-
-            <Divider sx={{ my: 1.5 }} />
-
-            <Stack spacing={1.5}>
-              <TextField
-                label={t("common.noteOptional")}
-                size="small"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                fullWidth
-                placeholder={t("production.noteAppliedToAll")}
-              />
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<AddIcon />}
-                onClick={handleSubmit}
-                disabled={cart.length === 0 || create.isPending}
-                fullWidth
-              >
-                {cart.length > 0
-                  ? t(cart.length !== 1 ? "production.createRequests_other" : "production.createRequests_one", { count: cart.length })
-                  : t("production.createRequestsDefault")}
-              </Button>
-            </Stack>
-          </Paper>
+            </Paper>
+          </Grid>
         </Grid>
-      </Grid>
+      )}
 
-      <Divider />
-
-      {/* Existing queue */}
+      {/* Queue */}
       <Stack spacing={1.5}>
         <Stack direction="row" spacing={1} alignItems="center">
           <Typography variant="subtitle1" fontWeight="bold" sx={{ flex: 1 }}>

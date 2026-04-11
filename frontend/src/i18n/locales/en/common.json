@@ -456,6 +456,7 @@
     "title": "Production Queue",
     "searchProducts": "Search products…",
     "lowStock": "Low stock",
+    "addToQueue": "Add to Queue",
     "requestsToCreate": "Requests to create",
     "units": "{{count}} units",
     "clickToAddRequest": "Click +N next to a variant to add a production request.",
