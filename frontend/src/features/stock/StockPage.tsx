@@ -183,10 +183,12 @@ export default function StockPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [movTypeFilter, setMovTypeFilter] = useState("");
+  const [page, setPage] = useState(1);
   const { data: locationsData } = useLocations();
-  const { data: movements, isLoading } = useStockMovements(
-    movTypeFilter ? { movement_type: movTypeFilter } : undefined
-  );
+  const { data: movements, isLoading } = useStockMovements({
+    ...(movTypeFilter ? { movement_type: movTypeFilter } : {}),
+    page,
+  });
 
   const locations = locationsData ?? [];
   const showLocations = locations.length > 1;
@@ -207,7 +209,7 @@ export default function StockPage() {
       <Stack direction="row" spacing={1} alignItems="center">
         <FormControl size="small" sx={{ minWidth: 180 }}>
           <InputLabel>{t("stock.filterType")}</InputLabel>
-          <Select label={t("stock.filterType")} value={movTypeFilter} onChange={(e) => setMovTypeFilter(e.target.value)}>
+          <Select label={t("stock.filterType")} value={movTypeFilter} onChange={(e) => { setMovTypeFilter(e.target.value); setPage(1); }}>
             <MenuItem value="">{t("stock.allMovements")}</MenuItem>
             {MOVEMENT_TYPE_KEYS.map((key) => (
               <MenuItem key={key} value={key}>{t(`stock.movementType.${key}`)}</MenuItem>
@@ -248,6 +250,21 @@ export default function StockPage() {
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination */}
+        {movements && (movements.next || movements.previous) && (
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 2, py: 1, borderTop: 1, borderColor: "divider" }}>
+            <Button size="small" disabled={!movements.previous} onClick={() => setPage((p) => p - 1)}>
+              {t("common.previous")}
+            </Button>
+            <Typography variant="caption" color="text.secondary">
+              {t("stock.pageInfo", { from: (page - 1) * 50 + 1, to: Math.min(page * 50, movements.count), total: movements.count })}
+            </Typography>
+            <Button size="small" disabled={!movements.next} onClick={() => setPage((p) => p + 1)}>
+              {t("common.next")}
+            </Button>
+          </Stack>
+        )}
       </Paper>
     </Stack>
   );

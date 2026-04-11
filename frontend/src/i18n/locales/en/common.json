@@ -23,6 +23,8 @@
     "change": "Change",
     "confirm": "Confirm",
     "search": "Search",
+    "previous": "Previous",
+    "next": "Next",
     "note": "Note",
     "date": "Date",
     "quantity": "Quantity",
@@ -303,6 +305,7 @@
     "qty": "Qty",
     "note": "Note",
     "noMovementsYet": "No movements yet. Add stock from the Catalog page.",
+    "pageInfo": "{{from}}–{{to}} of {{total}}",
     "batchItems": "Batch — {{count}} items",
     "movementType": {
       "produced": "Produced",
