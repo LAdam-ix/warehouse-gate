@@ -204,7 +204,17 @@ class ProductVariantViewSet(FirmScopedMixin, viewsets.ModelViewSet):
         )
 
     def perform_update(self, serializer):
-        serializer.save(updated_by=self.get_user())
+        variant = serializer.save(updated_by=self.get_user())
+        # If this variant was just archived, check if any active variants remain.
+        # If none, auto-unarchive the default variant so the product isn't orphaned.
+        if not variant.is_active:
+            product = variant.product
+            active_count = product.variants.filter(is_active=True).count()
+            if active_count == 0:
+                default_v = product.variants.filter(is_default=True).first()
+                if default_v:
+                    default_v.is_active = True
+                    default_v.save(update_fields=["is_active", "updated_at"])
 
     def destroy(self, request, *args, **kwargs):
         variant = self.get_object()
@@ -266,7 +276,11 @@ class VariantAttributeViewSet(FirmScopedMixin, viewsets.ModelViewSet):
         )
 
     def perform_update(self, serializer):
-        serializer.save(updated_by=self.get_user())
+        attr = serializer.save(updated_by=self.get_user())
+        # Recompute sort_key on all variants when attribute sort_order changes
+        for variant in attr.product.variants.prefetch_related("attribute_values__attribute").all():
+            variant.recompute_sort_key()
+            variant.save(update_fields=["sort_key"])
 
 
 class AttributeValueViewSet(FirmScopedMixin, viewsets.ModelViewSet):
@@ -292,4 +306,8 @@ class AttributeValueViewSet(FirmScopedMixin, viewsets.ModelViewSet):
         )
 
     def perform_update(self, serializer):
-        serializer.save(updated_by=self.get_user())
+        value = serializer.save(updated_by=self.get_user())
+        # Recompute sort_key on all variants that use this attribute value
+        for variant in value.variants.prefetch_related("attribute_values__attribute").all():
+            variant.recompute_sort_key()
+            variant.save(update_fields=["sort_key"])

@@ -126,12 +126,39 @@ class ProductVariantSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.photo.url) if request else obj.photo.url
         return None
 
+    def _check_duplicate_values(self, product, attribute_values, exclude_id=None):
+        """Reject if another active variant has the exact same attribute value set."""
+        if attribute_values is None:
+            return
+        new_ids = sorted(str(av.id) for av in attribute_values)
+        qs = ProductVariant.objects.filter(product=product, is_active=True)
+        if exclude_id:
+            qs = qs.exclude(id=exclude_id)
+        for other in qs.prefetch_related("attribute_values"):
+            other_ids = sorted(str(av.id) for av in other.attribute_values.all())
+            if new_ids == other_ids:
+                raise serializers.ValidationError(
+                    {"detail": "A variant with these attribute values already exists."}
+                )
+
+    def create(self, validated_data):
+        attribute_values = validated_data.pop("attribute_values", None)
+        instance = super().create(validated_data)
+        if attribute_values is not None:
+            self._check_duplicate_values(instance.product, attribute_values)
+            instance.attribute_values.set(attribute_values)
+        instance.recompute_sort_key()
+        instance.save(update_fields=["sort_key"])
+        return instance
+
     def update(self, instance, validated_data):
-        # Handle M2M separately (DRF doesn't do it automatically in all versions)
         attribute_values = validated_data.pop("attribute_values", None)
         instance = super().update(instance, validated_data)
         if attribute_values is not None:
+            self._check_duplicate_values(instance.product, attribute_values, exclude_id=instance.id)
             instance.attribute_values.set(attribute_values)
+        instance.recompute_sort_key()
+        instance.save(update_fields=["sort_key"])
         return instance
 
     class Meta:

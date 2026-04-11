@@ -197,6 +197,16 @@ class ProductVariant(AuditModel):
     is_default = models.BooleanField(
         default=False, help_text="True for the auto-created variant on attribute-less products"
     )
+    # Materialized sort key built from attribute value sort_orders.
+    # Format: "001-003" (zero-padded). Updated on attribute value changes.
+    sort_key = models.CharField(max_length=255, blank=True, default="")
+
+    def recompute_sort_key(self):
+        """Rebuild sort_key from current attribute values, ordered by attribute sort_order."""
+        avs = self.attribute_values.select_related("attribute").order_by(
+            "attribute__sort_order", "attribute__id", "sort_order"
+        )
+        self.sort_key = "-".join(f"{av.sort_order:04d}" for av in avs)
 
     def __str__(self):
         values = ", ".join(str(v) for v in self.attribute_values.all())
@@ -260,4 +270,4 @@ class ProductVariant(AuditModel):
         return self.total_stock <= threshold
 
     class Meta:
-        ordering = ["product__name"]
+        ordering = ["sort_key", "created_at"]

@@ -824,10 +824,13 @@ function VariantManager({
           attributeValueIds: ids,
         });
       }
-      // Auto-remove the default variant if it has no stock and no attribute values
+      // Auto-archive the default variant (not delete — user can unarchive later)
       const defaultVariant = variants.find((v) => v.isDefault && v.attributeValues.length === 0);
-      if (defaultVariant && defaultVariant.totalStock === 0) {
-        try { await deleteVariant.mutateAsync(defaultVariant.id); } catch { /* has movements, leave it */ }
+      if (defaultVariant && defaultVariant.isActive) {
+        try {
+          const { axiosInstance } = await import("../../api/client/axiosInstance");
+          await axiosInstance.patch(`/variants/${defaultVariant.id}/`, { isActive: false });
+        } catch { /* ignore */ }
       }
       setGenOpen(false);
       toast.success(t("variants.generateDialog.created_other", { count: newCombinations.length }));
