@@ -677,6 +677,8 @@ function VariantManager({
   const [variantDialogOpen, setVariantDialogOpen] = useState(false);
   const [variantSku, setVariantSku] = useState("");
   const [variantPriceDelta, setVariantPriceDelta] = useState("");
+  const [variantCostDelta, setVariantCostDelta] = useState("");
+  const [variantWeight, setVariantWeight] = useState("");
   const [variantValueIds, setVariantValueIds] = useState<Record<string, string>>({});
 
   // Assign values to existing (default) variant
@@ -892,14 +894,15 @@ function VariantManager({
       product: productId,
       sku: variantSku || "",
       priceDelta: variantPriceDelta || "0",
-      costDelta: "0",
+      costDelta: variantCostDelta || "0",
+      weight: variantWeight || null,
       photo: null,
       galleryPhoto: null,
       lowStockThreshold: null,
       isActive: true,
       attributeValueIds: Object.values(variantValueIds).filter(Boolean),
     });
-    setVariantSku(""); setVariantPriceDelta(""); setVariantValueIds({});
+    setVariantSku(""); setVariantPriceDelta(""); setVariantCostDelta(""); setVariantWeight(""); setVariantValueIds({});
     setVariantDialogOpen(false);
     toast.success(t("variants.created"));
   };
@@ -1577,6 +1580,25 @@ function VariantManager({
               onKeyDown={blockNonDecimal}
               slotProps={{ htmlInput: { step: "0.01" } }}
               helperText={t("variants.addVariantDialog.priceDeltaHelper")}
+            />
+            <TextField
+              label={t("variants.addVariantDialog.costDelta")}
+              type="number" size="small" fullWidth
+              value={variantCostDelta}
+              onChange={(e) => setVariantCostDelta(e.target.value)}
+              onKeyDown={blockNonDecimal}
+              slotProps={{ htmlInput: { step: "0.01" } }}
+              helperText={t("variants.addVariantDialog.costDeltaHelper")}
+            />
+            <TextField
+              label={t("variants.addVariantDialog.weight")}
+              type="number" size="small" fullWidth
+              value={variantWeight}
+              onChange={(e) => setVariantWeight(e.target.value)}
+              onKeyDown={blockNonDecimal}
+              slotProps={{ htmlInput: { step: "0.001", min: 0 }, inputLabel: { shrink: true } }}
+              placeholder="—"
+              helperText={t("variants.addVariantDialog.weightHelper")}
             />
           </Stack>
         </DialogContent>

@@ -179,7 +179,11 @@
       "title": "Add Variant",
       "skuOptional": "SKU (optional)",
       "priceDelta": "Price delta (€) — e.g. +2.00 or -1.50",
-      "priceDeltaHelper": "Added to the product's base price. Leave blank for 0."
+      "priceDeltaHelper": "Added to the product's base price. Leave blank for 0.",
+      "costDelta": "Cost delta (€)",
+      "costDeltaHelper": "Added to the product's base cost. Leave blank for 0.",
+      "weight": "Weight (g)",
+      "weightHelper": "Weight in grams. Leave blank to inherit from product."
     },
     "generateDialog": {
       "title": "Generate Variant Combinations",

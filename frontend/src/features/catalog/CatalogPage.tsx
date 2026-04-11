@@ -14,7 +14,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   useProducts, useProduct, useCreateProduct, useCategories, useCreateCategory,
@@ -595,16 +595,41 @@ function CreateCategoryDialog({ open, onClose }: { open: boolean; onClose: () =>
 export default function CatalogPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  // item type: "physical" | "service" | null (null = show all)
-  const [typeFilter, setTypeFilter] = useState<string | null>(null);
-  // tags: 3 states per category — included, excluded, neither
-  const [includedTags, setIncludedTags] = useState<string[]>([]);
-  const [excludedTags, setExcludedTags] = useState<string[]>([]);
-  const [catMode, setCatMode] = useState<"or" | "and">("or");
-  // "active" = active only, "all" = both, "archived" = archived only
-  const [archiveMode, setArchiveMode] = useState<"active" | "all" | "archived">("active");
-  const [locationFilter, setLocationFilter] = useState<string | null>(null);
+  const [sp, setSp] = useSearchParams();
+
+  // Read filters from URL, write back on change
+  const search = sp.get("q") ?? "";
+  const setSearch = (v: string) => setSp((p) => { v ? p.set("q", v) : p.delete("q"); return p; }, { replace: true });
+  const typeFilter = sp.get("type") ?? null;
+  const setTypeFilter = (v: string | null | ((prev: string | null) => string | null)) => setSp((p) => {
+    const next = typeof v === "function" ? v(p.get("type") ?? null) : v;
+    next ? p.set("type", next) : p.delete("type"); return p;
+  }, { replace: true });
+  const includedTags = sp.get("inc")?.split(",").filter(Boolean) ?? [];
+  const excludedTags = sp.get("exc")?.split(",").filter(Boolean) ?? [];
+  const setIncludedTags = (fn: (prev: string[]) => string[]) => setSp((p) => {
+    const next = fn(p.get("inc")?.split(",").filter(Boolean) ?? []);
+    next.length ? p.set("inc", next.join(",")) : p.delete("inc"); return p;
+  }, { replace: true });
+  const setExcludedTags = (fn: (prev: string[]) => string[]) => setSp((p) => {
+    const next = fn(p.get("exc")?.split(",").filter(Boolean) ?? []);
+    next.length ? p.set("exc", next.join(",")) : p.delete("exc"); return p;
+  }, { replace: true });
+  const catMode = (sp.get("catMode") ?? "or") as "or" | "and";
+  const setCatMode = (fn: (prev: "or" | "and") => "or" | "and") => setSp((p) => {
+    const next = fn((p.get("catMode") ?? "or") as "or" | "and");
+    next === "or" ? p.delete("catMode") : p.set("catMode", next); return p;
+  }, { replace: true });
+  const archiveMode = (sp.get("archive") ?? "active") as "active" | "all" | "archived";
+  const setArchiveMode = (fn: (prev: "active" | "all" | "archived") => "active" | "all" | "archived") => setSp((p) => {
+    const next = fn((p.get("archive") ?? "active") as "active" | "all" | "archived");
+    next === "active" ? p.delete("archive") : p.set("archive", next); return p;
+  }, { replace: true });
+  const locationFilter = sp.get("loc") ?? null;
+  const setLocationFilter = (fn: (prev: string | null) => string | null) => setSp((p) => {
+    const next = fn(p.get("loc") ?? null);
+    next ? p.set("loc", next) : p.delete("loc"); return p;
+  }, { replace: true });
   const [createOpen, setCreateOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
 
@@ -633,7 +658,7 @@ export default function CatalogPage() {
     }
   };
 
-  const clearTags = () => { setIncludedTags([]); setExcludedTags([]); };
+  const clearTags = () => { setIncludedTags(() => []); setExcludedTags(() => []); };
 
   const products = data?.results?.filter((p) => {
     // Included tags (AND/OR)
