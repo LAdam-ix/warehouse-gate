@@ -65,6 +65,12 @@ class Firm(AuditModel):
 class UserWarehouseAccess(AuditModel):
     """
     Per-user, per-firm warehouse permission level.
+
+    TODO: Before expanding to role-based permissions (owner, admin, manager,
+    shopkeeper, sales, warehouse, accountant, viewer), check how fakturuj.si
+    handles user-firm roles. If it has a similar model, merge rather than
+    duplicate. The current view/edit levels will map to roles in one migration.
+    See conversation notes for the full role-access matrix.
     """
     class Level(models.TextChoices):
         NONE = "none", "No Access"
