@@ -35,6 +35,30 @@ def finalize_sale(sale: Sale, user=None) -> Sale:
     if not lines.exists():
         raise ValidationError("Cannot finalize an empty sale.")
 
+    # Merge duplicate lines (same variant + same location) before finalizing.
+    # Keeps cart UX flexible (add individually), but invoice shows clean totals.
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for line in lines:
+        key = (line.variant_id, line.location_id)
+        groups[key].append(line)
+    for key, group in groups.items():
+        if len(group) <= 1:
+            continue
+        keep = group[0]
+        for dup in group[1:]:
+            if keep.hours is not None and dup.hours is not None:
+                keep.hours = keep.hours + dup.hours
+            else:
+                keep.quantity = keep.quantity + dup.quantity
+            keep.discount_amount = keep.discount_amount + dup.discount_amount
+            if dup.discount_note:
+                keep.discount_note = "; ".join(filter(None, [keep.discount_note, dup.discount_note]))
+            dup.delete()
+        keep.save()
+    # Re-fetch lines after merge
+    lines = sale.lines.select_related("variant__product__firm", "variant__product").all()
+
     sale_batch_id = uuid.uuid4()
     for line in lines:
         if line.variant and line.variant.product.item_type == "physical":
