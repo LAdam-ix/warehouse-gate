@@ -94,8 +94,8 @@ function MovementGroupRow({ group, showLocations }: { group: MovementGroup; show
           />
         </TableCell>
         <TableCell align="right">
-          <Typography variant="body2" fontWeight="bold" color={m.quantityDelta >= 0 ? "success.main" : "error.main"}>
-            {m.quantityDelta >= 0 ? "+" : ""}{m.quantityDelta}
+          <Typography variant="body2" fontWeight="bold" color={m.quantityDelta > 0 ? "success.main" : m.quantityDelta < 0 ? "error.main" : "text.secondary"}>
+            {m.quantityDelta > 0 ? "+" : ""}{m.quantityDelta}
           </Typography>
         </TableCell>
         <TableCell>
@@ -141,7 +141,9 @@ function MovementGroupRow({ group, showLocations }: { group: MovementGroup; show
           />
         </TableCell>
         <TableCell align="right">
-          <Typography variant="body2" fontWeight="bold" color="success.main">+{totalDelta}</Typography>
+          <Typography variant="body2" fontWeight="bold" color={totalDelta > 0 ? "success.main" : totalDelta < 0 ? "error.main" : "text.secondary"}>
+            {totalDelta > 0 ? "+" : ""}{totalDelta}
+          </Typography>
         </TableCell>
         <TableCell>
           <Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -162,7 +164,9 @@ function MovementGroupRow({ group, showLocations }: { group: MovementGroup; show
                   {showLocations && (
                     <Typography variant="caption" color="text.secondary">{m.locationName}</Typography>
                   )}
-                  <Typography variant="body2" fontWeight="bold" color="success.main">+{m.quantityDelta}</Typography>
+                  <Typography variant="body2" fontWeight="bold" color={m.quantityDelta > 0 ? "success.main" : m.quantityDelta < 0 ? "error.main" : "text.secondary"}>
+                    {m.quantityDelta > 0 ? "+" : ""}{m.quantityDelta}
+                  </Typography>
                 </Stack>
               ))}
             </Stack>
