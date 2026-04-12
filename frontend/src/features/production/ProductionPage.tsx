@@ -11,6 +11,7 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { toast } from "react-toastify";
 import {
   useCreateProductionRequest,
@@ -336,7 +337,7 @@ export default function ProductionPage() {
         <Button
           variant={addOpen ? "contained" : "outlined"}
           size="small"
-          startIcon={<AddIcon />}
+          startIcon={addOpen ? <ExpandLessIcon /> : <AddIcon />}
           onClick={() => setAddOpen((v) => !v)}
         >
           {t("production.addToQueue")}

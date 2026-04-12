@@ -23,6 +23,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import SortIcon from "@mui/icons-material/Sort";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import { toast } from "react-toastify";
@@ -1021,6 +1022,7 @@ function VariantManager({
             size="small"
             variant={batchStockOpen ? "contained" : "outlined"}
             color="success"
+            startIcon={batchStockOpen ? <ExpandLessIcon /> : <AddIcon />}
             onClick={() => setBatchStockOpen((v) => !v)}
           >
             {t("variants.batchStock.button")}
