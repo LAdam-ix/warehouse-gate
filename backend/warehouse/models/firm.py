@@ -121,6 +121,11 @@ class WarehouseSettings(models.Model):
         help_text='Unified color library. [{name, hex, status: favorite|normal|hidden, isPreset: bool}]',
     )
 
+    auto_production_priority = models.IntegerField(
+        default=1,
+        help_text="Default priority for auto-triggered production requests (0=Low, 1=Normal, 2=High, 3=Urgent).",
+    )
+
     # POS terminal auth token — generated once, entered on POS setup screen.
     # When merging with fakturuj.si: replace with proper per-device tokens
     # (separate model, one token per terminal, revocable individually).

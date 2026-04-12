@@ -25,6 +25,8 @@ class ProductionRequestSerializer(serializers.ModelSerializer):
             "quantity_target",
             "status",
             "trigger",
+            "priority",
+            "batch_id",
             "note",
             "fulfilled_at",
             "fulfilled_by",
@@ -73,5 +75,7 @@ class ProductionRequestCreateSerializer(serializers.ModelSerializer):
             "quantity_requested",
             "quantity_target",
             "trigger",
+            "priority",
+            "batch_id",
             "note",
         ]

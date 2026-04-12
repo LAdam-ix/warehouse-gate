@@ -490,6 +490,13 @@
     "requestFulfilled": "Request fulfilled",
     "requestCancelled": "Request cancelled",
     "markedInProgress": "Marked in progress",
+    "priority": "Priority",
+    "priorityLow": "Low",
+    "priorityNormal": "Normal",
+    "priorityHigh": "High",
+    "priorityUrgent": "Urgent",
+    "batchContext": "Batch context",
+    "batchContextTooltip": "When on, show entire batch when any item matches the filter",
     "createdRequests_one": "Created {{count}} production request",
     "createdRequests_other": "Created {{count}} production requests",
     "fulfillDialog": {

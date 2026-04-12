@@ -629,14 +629,6 @@ export default function CatalogPage() {
 
   const includedTags = sp.get("inc")?.split(",").filter(Boolean) ?? [];
   const excludedTags = sp.get("exc")?.split(",").filter(Boolean) ?? [];
-  const setIncludedTags = (fn: (prev: string[]) => string[]) => setSp((p) => {
-    const next = fn(p.get("inc")?.split(",").filter(Boolean) ?? []);
-    next.length ? p.set("inc", next.join(",")) : p.delete("inc"); return p;
-  }, { replace: true });
-  const setExcludedTags = (fn: (prev: string[]) => string[]) => setSp((p) => {
-    const next = fn(p.get("exc")?.split(",").filter(Boolean) ?? []);
-    next.length ? p.set("exc", next.join(",")) : p.delete("exc"); return p;
-  }, { replace: true });
   const catMode = (sp.get("catMode") ?? "or") as "or" | "and";
   const setCatMode = (fn: (prev: "or" | "and") => "or" | "and") => setSp((p) => {
     const next = fn((p.get("catMode") ?? "or") as "or" | "and");

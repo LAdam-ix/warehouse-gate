@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Box, Button, Chip, CircularProgress, Divider,
+  Box, Button, Chip, CircularProgress, Divider, FormControl, InputLabel, MenuItem, Select,
   Grid, IconButton, Paper, Stack, TextField, Tooltip, Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
@@ -121,7 +121,11 @@ function RequestRow({ req }: { req: ProductionRequest }) {
 
   return (
     <>
-      <Stack direction="row" alignItems="flex-start" spacing={1.5} sx={{ py: 1.5, px: 2 }}>
+      <Stack direction="row" alignItems="flex-start" spacing={1.5} sx={{
+        py: 1.5, px: 2,
+        borderLeft: req.priority >= 2 ? "3px solid" : "none",
+        borderColor: req.priority === 3 ? "error.main" : req.priority === 2 ? "warning.main" : "transparent",
+      }}>
         <Stack spacing={0.5} sx={{ minWidth: 90 }}>
           <Chip
             label={t(`production.status.${req.status}`)}
@@ -252,8 +256,12 @@ export default function ProductionPage() {
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [note, setNote] = useState("");
+  const [priority, setPriority] = useState(1);
   const [statusFilter, setStatusFilter] = useState("pending,in_progress");
   const [addOpen, setAddOpen] = useState(false);
+  const [batchContext, setBatchContext] = useState(() => {
+    try { return localStorage.getItem("production_batch_context") !== "off"; } catch { return true; }
+  });
 
   const create = useCreateProductionRequest();
 
@@ -305,11 +313,14 @@ export default function ProductionPage() {
 
   const handleSubmit = async () => {
     if (cart.length === 0) return;
+    const batchId = cart.length > 1 ? crypto.randomUUID() : undefined;
     await Promise.all(
       cart.map((line) =>
         create.mutateAsync({
           variant: line.variantId,
           quantityRequested: line.quantity,
+          priority,
+          batchId,
           note: note || undefined,
         })
       )
@@ -317,6 +328,8 @@ export default function ProductionPage() {
     toast.success(t(cart.length !== 1 ? "production.createdRequests_other" : "production.createdRequests_one", { count: cart.length }));
     setCart([]);
     setNote("");
+    setPriority(1);
+    setAddOpen(false);
   };
 
   const totalRequested = cart.reduce((s, l) => s + l.quantity, 0);
@@ -415,6 +428,15 @@ export default function ProductionPage() {
               <Divider sx={{ my: 1.5 }} />
 
               <Stack spacing={1.5}>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>{t("production.priority")}</InputLabel>
+                  <Select label={t("production.priority")} value={priority} onChange={(e) => setPriority(Number(e.target.value))}>
+                    <MenuItem value={0}>{t("production.priorityLow")}</MenuItem>
+                    <MenuItem value={1}>{t("production.priorityNormal")}</MenuItem>
+                    <MenuItem value={2}>{t("production.priorityHigh")}</MenuItem>
+                    <MenuItem value={3}>{t("production.priorityUrgent")}</MenuItem>
+                  </Select>
+                </FormControl>
                 <TextField
                   label={t("common.noteOptional")}
                   size="small"
@@ -447,6 +469,20 @@ export default function ProductionPage() {
           <Typography variant="subtitle1" fontWeight="bold" sx={{ flex: 1 }}>
             {t("production.queue")}
           </Typography>
+          <Tooltip title={t("production.batchContextTooltip")}>
+            <Chip
+              label={t("production.batchContext")}
+              size="small"
+              onClick={() => {
+                const next = !batchContext;
+                setBatchContext(next);
+                try { localStorage.setItem("production_batch_context", next ? "on" : "off"); } catch {}
+              }}
+              color={batchContext ? "info" : "default"}
+              variant={batchContext ? "filled" : "outlined"}
+              sx={{ cursor: "pointer" }}
+            />
+          </Tooltip>
           {STATUS_FILTERS.map(({ val, label }) => (
             <Chip
               key={val}
@@ -475,9 +511,36 @@ export default function ProductionPage() {
             </Box>
           )}
           <Stack divider={<Divider />}>
-            {filteredQueue.map((req) => (
-              <RequestRow key={req.id} req={req} />
-            ))}
+            {(() => {
+              // Group by batch_id, preserving order (already sorted by -priority, created_at on backend)
+              const groups: { batchId: string | null; items: typeof filteredQueue }[] = [];
+              for (const req of filteredQueue) {
+                const bid = req.batchId;
+                if (bid) {
+                  const existing = groups.find((g) => g.batchId === bid);
+                  if (existing) { existing.items.push(req); continue; }
+                }
+                groups.push({ batchId: bid, items: [req] });
+              }
+
+              // Apply batch context filter
+              const visibleGroups = groups.map((g) => {
+                if (!batchContext || !g.batchId) return g;
+                // In batch context mode: show entire batch if any item matches the current filter
+                // (filteredQueue already has the filter applied, so all items here match)
+                return g;
+              });
+
+              let batchColorIdx = 0;
+              return visibleGroups.flatMap((group) => {
+                const bg = group.batchId ? (batchColorIdx++ % 2 === 0 ? "grey.50" : "background.paper") : "background.paper";
+                return group.items.map((req) => (
+                  <Box key={req.id} sx={{ bgcolor: bg }}>
+                    <RequestRow req={req} />
+                  </Box>
+                ));
+              });
+            })()}
           </Stack>
         </Paper>
       </Stack>

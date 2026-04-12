@@ -20,10 +20,10 @@ class ProductionRequestViewSet(FirmScopedMixin, viewsets.ModelViewSet):
         "variant__product", "created_by", "fulfilled_by"
     )
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ["status", "trigger", "variant", "variant__product"]
+    filterset_fields = ["status", "trigger", "variant", "variant__product", "priority", "batch_id"]
     search_fields = ["note", "variant__product__name"]
-    ordering_fields = ["created_at", "status"]
-    ordering = ["-created_at"]
+    ordering_fields = ["created_at", "status", "priority"]
+    ordering = ["-priority", "created_at"]
 
     def get_queryset(self):
         # Scope by variant's product's firm (no direct firm FK on this model)
@@ -107,6 +107,11 @@ class ProductionRequestViewSet(FirmScopedMixin, viewsets.ModelViewSet):
         prod_req.updated_by = user
         prod_req.save()
         return Response(ProductionRequestSerializer(prod_req, context={"request": request}).data)
+
+    @action(detail=False, methods=["get"])
+    def priorities(self, request):
+        """Returns {value: label} dict of priority choices for frontends."""
+        return Response(ProductionRequest.PRIORITY_CHOICES_DICT)
 
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):

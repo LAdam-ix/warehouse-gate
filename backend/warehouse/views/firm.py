@@ -49,6 +49,7 @@ class WarehouseSettingsSerializer(serializers.Serializer):
     color_library = serializers.ListField(
         child=serializers.DictField(), required=False
     )
+    auto_production_priority = serializers.IntegerField(required=False, min_value=0, max_value=3)
     pos_api_token = serializers.CharField(required=False, allow_blank=True)
 
 

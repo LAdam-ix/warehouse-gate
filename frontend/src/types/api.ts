@@ -34,6 +34,7 @@ export interface WarehouseSettings {
   warehouseMode: "strict" | "soft" | "disabled";
   /** Unified color library. Stores custom colors + state overrides for presets. */
   colorLibrary: { name: string; hex: string; status: "favorite" | "normal" | "hidden"; isPreset: boolean }[];
+  autoProductionPriority: number;
   posApiToken: string;
 }
 
@@ -398,6 +399,8 @@ export interface ProductionRequest {
   quantityTarget: number | null;
   status: "pending" | "in_progress" | "fulfilled" | "cancelled";
   trigger: "auto" | "manual" | "seasonal";
+  priority: number;
+  batchId: string | null;
   note: string;
   fulfilledAt: string | null;
   fulfilledBy: string | null;
@@ -413,6 +416,8 @@ export interface ProductionRequestCreate {
   quantityRequested: number;
   quantityTarget?: number | null;
   trigger?: ProductionRequest["trigger"];
+  priority?: number;
+  batchId?: string;
   note?: string;
 }
 

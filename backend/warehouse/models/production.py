@@ -21,6 +21,15 @@ class ProductionRequest(AuditModel):
         MANUAL = "manual", "Manual"
         SEASONAL = "seasonal", "Seasonal / Planned"
 
+    class Priority(models.IntegerChoices):
+        LOW = 0, "Low"
+        NORMAL = 1, "Normal"
+        HIGH = 2, "High"
+        URGENT = 3, "Urgent"
+
+    # Expose choices as a dict for frontends: {0: "Low", 1: "Normal", ...}
+    PRIORITY_CHOICES_DICT = {c.value: c.label for c in Priority}
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     variant = models.ForeignKey(
         "warehouse.ProductVariant",
@@ -41,6 +50,10 @@ class ProductionRequest(AuditModel):
     trigger = models.CharField(
         max_length=20, choices=Trigger.choices, default=Trigger.MANUAL
     )
+    priority = models.IntegerField(
+        choices=Priority.choices, default=Priority.NORMAL, db_index=True
+    )
+    batch_id = models.UUIDField(null=True, blank=True, db_index=True)
     note = models.TextField(blank=True)
 
     fulfilled_at = models.DateTimeField(null=True, blank=True)
@@ -56,4 +69,4 @@ class ProductionRequest(AuditModel):
         return f"{self.trigger} request — {self.variant} ×{self.quantity_requested} [{self.status}]"
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-priority", "created_at"]
