@@ -676,17 +676,30 @@ export default function CatalogPage() {
 
   // Cycle: unselected → included → excluded → unselected
   const cycleTag = (id: string) => {
-    if (includedTags.includes(id)) {
-      setIncludedTags((p) => p.filter((c) => c !== id));
-      setExcludedTags((p) => [...p, id]);
-    } else if (excludedTags.includes(id)) {
-      setExcludedTags((p) => p.filter((c) => c !== id));
-    } else {
-      setIncludedTags((p) => [...p, id]);
-    }
+    setSp((p) => {
+      const inc = p.get("inc")?.split(",").filter(Boolean) ?? [];
+      const exc = p.get("exc")?.split(",").filter(Boolean) ?? [];
+      if (inc.includes(id)) {
+        // included → excluded
+        const nextInc = inc.filter((c) => c !== id);
+        const nextExc = [...exc, id];
+        nextInc.length ? p.set("inc", nextInc.join(",")) : p.delete("inc");
+        p.set("exc", nextExc.join(","));
+      } else if (exc.includes(id)) {
+        // excluded → unselected
+        const nextExc = exc.filter((c) => c !== id);
+        nextExc.length ? p.set("exc", nextExc.join(",")) : p.delete("exc");
+      } else {
+        // unselected → included
+        p.set("inc", [...inc, id].join(","));
+      }
+      return p;
+    }, { replace: true });
   };
 
-  const clearTags = () => { setIncludedTags(() => []); setExcludedTags(() => []); };
+  const clearTags = () => {
+    setSp((p) => { p.delete("inc"); p.delete("exc"); return p; }, { replace: true });
+  };
 
   const filtered = (data?.results ?? []).filter((p) => {
     // Type filter (accumulative, client-side when both selected = show all)
@@ -777,7 +790,7 @@ export default function CatalogPage() {
                 label={isExcluded ? `−${c.name}` : c.name}
                 size="small"
                 onClick={() => cycleTag(c.id)}
-                color={isIncluded ? "primary" : isExcluded ? "error" : "default"}
+                color={isIncluded ? "success" : isExcluded ? "error" : "default"}
                 variant={isIncluded || isExcluded ? "filled" : "outlined"}
                 sx={{ cursor: "pointer" }}
                 title={isIncluded ? t("catalog.includedClick") : isExcluded ? t("catalog.excludedClick") : "Click to include, double-click to exclude"}
