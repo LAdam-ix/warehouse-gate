@@ -802,5 +802,15 @@
   "locations": {
     "location": "Location",
     "defaultSuffix": " (default)"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "firstPage": "First page",
+    "lastPage": "Last page",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "showing": "Showing {{start}}–{{end}} of {{total}}",
+    "perPage": "Per page:"
   }
 }
