@@ -650,6 +650,8 @@
     "costDefaults": "Cost defaults",
     "defaultEnergyRate": "Energy rate (€/kWh)",
     "defaultEnergyRateHelper": "Pre-filled in production cost forms. Can be overridden per product.",
+    "autoProductionPriority": "Auto-production priority",
+    "autoProductionPriorityHelper": "Default priority for production requests triggered by low stock threshold.",
     "saveChanges": "Save changes",
     "settingsSaved": "Settings saved",
     "colorLibrary": "Color Library",

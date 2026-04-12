@@ -518,6 +518,27 @@ export function WarehouseSettings() {
                 disabled={updateWSettings.isPending}
               />
               <Divider />
+              <Box>
+                <Typography variant="body2" fontWeight="medium" gutterBottom>
+                  {t("settings.autoProductionPriority")}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                  {t("settings.autoProductionPriorityHelper")}
+                </Typography>
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <Select
+                    value={wSettings?.autoProductionPriority ?? 1}
+                    onChange={(e) => updateWSettings.mutate({ autoProductionPriority: Number(e.target.value) })}
+                    disabled={updateWSettings.isPending}
+                  >
+                    <MenuItem value={0}>{t("production.priorityLow")}</MenuItem>
+                    <MenuItem value={1}>{t("production.priorityNormal")}</MenuItem>
+                    <MenuItem value={2}>{t("production.priorityHigh")}</MenuItem>
+                    <MenuItem value={3}>{t("production.priorityUrgent")}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+              <Divider />
               <ColorManager
                 library={wSettings?.colorLibrary ?? []}
                 onSave={(lib) => updateWSettings.mutate({ colorLibrary: lib })}
