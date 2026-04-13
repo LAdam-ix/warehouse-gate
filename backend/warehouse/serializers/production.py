@@ -50,7 +50,9 @@ class ProductionRequestSerializer(serializers.ModelSerializer):
 
     def get_variant_photo_url(self, obj):
         v = obj.variant
-        # Gallery photo first, then variant's own photo, then product primary photo
+        # Gallery photo first, then variant's own photo.
+        # Fall back to product primary photo only for default variants
+        # (single-variant products where the product photo IS the variant photo).
         if v.gallery_photo_id:
             request = self.context.get("request")
             url = v.gallery_photo.image.url
@@ -58,10 +60,11 @@ class ProductionRequestSerializer(serializers.ModelSerializer):
         if v.photo:
             request = self.context.get("request")
             return request.build_absolute_uri(v.photo.url) if request else v.photo.url
-        primary = v.product.photos.filter(is_primary=True).first()
-        if primary:
-            request = self.context.get("request")
-            return request.build_absolute_uri(primary.image.url) if request else primary.image.url
+        if v.is_default and not v.attribute_values.exists():
+            primary = v.product.photos.filter(is_primary=True).first()
+            if primary:
+                request = self.context.get("request")
+                return request.build_absolute_uri(primary.image.url) if request else primary.image.url
         return None
 
     def get_variant_color_hex(self, obj):
