@@ -155,11 +155,8 @@ function RequestRow({ req }: { req: ProductionRequest }) {
         </Box>
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="body2" fontWeight="medium" noWrap>
-            {req.productName}
-            {req.variantName && req.variantName !== req.productName && (
-              <Typography component="span" variant="body2" color="text.secondary"> — {req.variantName}</Typography>
-            )}
+          <Typography variant={req.note ? "body2" : "body1"} fontWeight="medium" noWrap>
+            {req.variantName || req.productName}
           </Typography>
           {req.note && (
             <Typography variant="caption" color="text.disabled" display="block" noWrap>
