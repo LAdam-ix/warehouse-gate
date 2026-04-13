@@ -25,6 +25,7 @@ import ProductPickerPanel, { type ProductPickerSelectFn } from "../../components
 import { intQtyInputProps } from "../../utils/form";
 import type { ProductionRequest } from "../../types/api";
 import { useTranslation } from "react-i18next";
+import PaginationComponent, { usePagination } from "../../components/Pagination";
 
 // ─── Cart ─────────────────────────────────────────────────────────────────────
 
@@ -259,15 +260,18 @@ export default function ProductionPage() {
   const [priority, setPriority] = useState(1);
   const [statusFilter, setStatusFilter] = useState("pending,in_progress");
   const [addOpen, setAddOpen] = useState(false);
+  const [queueSearch, setQueueSearch] = useState("");
   const [batchContext, setBatchContext] = useState(() => {
     try { return localStorage.getItem("production_batch_context") !== "off"; } catch { return true; }
   });
+  const { page, pageSize, setPage, setPageSize } = usePagination(25);
 
   const create = useCreateProductionRequest();
 
-  const { data: queueData, isLoading: queueLoading } = useProductionRequests(
-    statusFilter === "pending,in_progress" ? undefined : statusFilter ? { status: statusFilter } : undefined
-  );
+  const queueParams: Record<string, unknown> = { page, page_size: pageSize };
+  if (statusFilter && statusFilter !== "pending,in_progress") queueParams.status = statusFilter;
+  if (queueSearch) queueParams.search = queueSearch;
+  const { data: queueData, isLoading: queueLoading } = useProductionRequests(queueParams);
 
   const queueRequests = queueData?.results ?? [];
   const filteredQueue =
@@ -488,12 +492,19 @@ export default function ProductionPage() {
               key={val}
               label={label}
               size="small"
-              onClick={() => setStatusFilter(val)}
+              onClick={() => { setStatusFilter(val); setPage(1); }}
               color={statusFilter === val ? "primary" : "default"}
               variant={statusFilter === val ? "filled" : "outlined"}
               sx={{ cursor: "pointer" }}
             />
           ))}
+          <TextField
+            size="small"
+            placeholder={t("production.searchQueue")}
+            value={queueSearch}
+            onChange={(e) => { setQueueSearch(e.target.value); setPage(1); }}
+            sx={{ width: 200 }}
+          />
         </Stack>
 
         <Paper variant="outlined">
@@ -542,6 +553,16 @@ export default function ProductionPage() {
               });
             })()}
           </Stack>
+          {(queueData?.count ?? 0) > pageSize && (
+            <PaginationComponent
+              count={queueData?.count ?? 0}
+              page={page}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              storageKey="productionQueue"
+            />
+          )}
         </Paper>
       </Stack>
     </Stack>

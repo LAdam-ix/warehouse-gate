@@ -17,6 +17,7 @@ import { useConfirm } from "../../components/ConfirmDialog";
 import type { StockMovement } from "../../types/api";
 import { useTranslation } from "react-i18next";
 import { navLinkProps } from "../../utils/navLink";
+import PaginationComponent, { usePagination } from "../../components/Pagination";
 
 
 // Backend returns pre-grouped movements: each result is { batchId, movements[] }
@@ -161,11 +162,12 @@ export default function StockPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [movTypeFilter, setMovTypeFilter] = useState("");
-  const [page, setPage] = useState(1);
+  const { page, pageSize, setPage, setPageSize } = usePagination(25);
   const { data: locationsData } = useLocations();
   const { data: movements, isLoading } = useStockMovements({
     ...(movTypeFilter ? { movement_type: movTypeFilter } : {}),
     page,
+    page_size: pageSize,
   });
 
   const locations = locationsData ?? [];
@@ -229,19 +231,15 @@ export default function StockPage() {
           </TableBody>
         </Table>
 
-        {/* Pagination */}
-        {movements && (movements.next || movements.previous) && (
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 2, py: 1, borderTop: 1, borderColor: "divider" }}>
-            <Button size="small" disabled={!movements.previous} onClick={() => setPage((p) => p - 1)}>
-              {t("common.previous")}
-            </Button>
-            <Typography variant="caption" color="text.secondary">
-              {t("stock.pageInfo", { count: movements.results.length, total: movements.count })}
-            </Typography>
-            <Button size="small" disabled={!movements.next} onClick={() => setPage((p) => p + 1)}>
-              {t("common.next")}
-            </Button>
-          </Stack>
+        {(movements?.count ?? 0) > pageSize && (
+          <PaginationComponent
+            count={movements?.count ?? 0}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            storageKey="stockMovements"
+          />
         )}
       </Paper>
     </Stack>

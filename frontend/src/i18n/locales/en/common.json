@@ -497,6 +497,7 @@
     "priorityUrgent": "Urgent",
     "batchContext": "Batch context",
     "batchContextTooltip": "When on, show entire batch when any item matches the filter",
+    "searchQueue": "Search queue…",
     "createdRequests_one": "Created {{count}} production request",
     "createdRequests_other": "Created {{count}} production requests",
     "fulfillDialog": {
