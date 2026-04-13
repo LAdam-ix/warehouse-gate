@@ -42,7 +42,11 @@ class ProductionRequestSerializer(serializers.ModelSerializer):
         ]
 
     def get_variant_name(self, obj):
-        return str(obj.variant)
+        # Returns "attrName: value | attrName: value" for variants with attributes,
+        # or empty string for default variants. product_name is a separate field.
+        # Frontend strips generic attribute names (color, size, pattern, etc.) for cleaner display.
+        values = obj.variant.attribute_values.select_related("attribute").all()
+        return " | ".join(f"{v.attribute.name}: {v.value}" for v in values) if values else ""
 
     def get_variant_photo_url(self, obj):
         v = obj.variant
