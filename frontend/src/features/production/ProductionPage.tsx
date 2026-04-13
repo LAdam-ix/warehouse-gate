@@ -124,8 +124,12 @@ function RequestRow({ req }: { req: ProductionRequest }) {
     <>
       <Stack direction="row" alignItems="flex-start" spacing={1.5} sx={{
         py: 1.5, px: 2,
-        borderLeft: req.priority >= 2 ? "3px solid" : "none",
-        borderColor: req.priority === 3 ? "error.main" : req.priority === 2 ? "warning.main" : "transparent",
+        borderLeft: "3px solid",
+        borderColor:
+          req.priority === 3 ? "error.main" :
+          req.priority === 2 ? "warning.main" :
+          req.priority === 1 ? "grey.300" :
+          "grey.100",
       }}>
         <Stack spacing={0.5} sx={{ minWidth: 90 }}>
           <Chip
@@ -134,6 +138,18 @@ function RequestRow({ req }: { req: ProductionRequest }) {
             size="small"
             variant="outlined"
           />
+          {req.priority !== 1 && (
+            <Chip
+              label={t(
+                req.priority === 3 ? "production.priorityUrgent" :
+                req.priority === 2 ? "production.priorityHigh" :
+                "production.priorityLow"
+              )}
+              size="small"
+              color={req.priority === 3 ? "error" : req.priority === 2 ? "warning" : "default"}
+              sx={{ fontSize: "0.65rem", height: 18 }}
+            />
+          )}
           {req.trigger === "auto" && (
             <Chip
               label={t("production.auto")}
