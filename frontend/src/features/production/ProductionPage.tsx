@@ -155,9 +155,25 @@ function RequestRow({ req }: { req: ProductionRequest }) {
         </Box>
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant={req.note ? "body2" : "body1"} fontWeight="medium" noWrap>
-            {req.variantName || req.productName}
-          </Typography>
+          {(() => {
+            // variantName comes as "attr: val | attr: val" (empty for default variant).
+            // Strip generic attribute names for cleaner display.
+            const GENERIC = new Set(["color", "colour", "size", "pattern", "material", "style"]);
+            const parts = (req.variantName ?? "").split(" | ").filter(Boolean).map((p) => {
+              const idx = p.indexOf(": ");
+              if (idx < 0) return p;
+              const name = p.slice(0, idx);
+              const value = p.slice(idx + 2);
+              return GENERIC.has(name.toLowerCase()) ? value : p;
+            });
+            const vLabel = parts.join(" | ");
+            return (
+              <Typography variant={req.note ? "body2" : "body1"} fontWeight="medium" noWrap>
+                {req.productName}
+                {vLabel && <Typography component="span" variant="body2"> — {vLabel}</Typography>}
+              </Typography>
+            );
+          })()}
           {req.note && (
             <Typography variant="caption" color="text.disabled" display="block" noWrap>
               {req.note}
