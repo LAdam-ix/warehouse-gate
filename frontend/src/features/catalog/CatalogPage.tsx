@@ -141,7 +141,7 @@ function VariantActions({
             <IconButton
               size="small"
               color="primary"
-              onClick={(e) => { e.stopPropagation(); setAddOpen(true); }}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAddOpen(true); }}
             >
               <AddIcon fontSize="small" />
             </IconButton>
@@ -151,7 +151,7 @@ function VariantActions({
           <IconButton
             size="small"
             color="success"
-            onClick={(e) => { e.stopPropagation(); setSellOpen(true); }}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSellOpen(true); }}
             disabled={!isService && variant.totalStock === 0}
           >
             <ShoppingCartIcon fontSize="small" />
@@ -250,7 +250,7 @@ function ProductVariantStock({ productId, productName, isService }: { productId:
             </Stack>
 
             {/* Actions (stop propagation so clicks don't navigate) */}
-            <Box onClick={(e) => e.stopPropagation()}>
+            <Box onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
               <VariantActions variant={v} productName={productName} isService={isService} />
             </Box>
           </Stack>
