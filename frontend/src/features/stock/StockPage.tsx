@@ -146,6 +146,11 @@ function MovementGroupRow({ group, showLocations }: { group: MovementGroup; show
                   <Typography variant="body2" fontWeight="bold" color={m.quantityDelta > 0 ? "success.main" : m.quantityDelta < 0 ? "error.main" : "text.secondary"}>
                     {m.quantityDelta > 0 ? "+" : ""}{m.quantityDelta}
                   </Typography>
+                  {m.isRevertable && (
+                    <IconButton size="small" onClick={() => handleRevert(m)} disabled={revert.isPending} title={t("stock.revert")}>
+                      <UndoIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  )}
                 </Stack>
               ))}
             </Stack>
